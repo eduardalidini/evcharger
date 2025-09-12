@@ -3,9 +3,10 @@ import { AdminNavUser } from '@/components/admin/admin-nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes/admin';
 import { index as usersIndex } from '@/routes/admin/users';
+import { index as receiptsIndex } from '@/routes/admin/receipts';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Receipt } from 'lucide-react';
 import AppLogo from '../app-logo';
 import { AdminNavMain } from './admin-nav-main';
 
@@ -19,6 +20,11 @@ const mainNavItems: NavItem[] = [
         title: 'Users',
         href: usersIndex(),
         icon: Users,
+    },
+    {
+        title: 'Receipts & Invoices',
+        href: receiptsIndex(),
+        icon: Receipt,
     },
 ];
 

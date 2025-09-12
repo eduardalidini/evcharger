@@ -37,7 +37,6 @@ class AdminAuthController extends Controller
             'data' => [
                 'admin' => [
                     'id' => $admin->id,
-                    'name' => $admin->name,
                     'email' => $admin->email,
                 ],
                 'token' => $token,
@@ -71,7 +70,6 @@ class AdminAuthController extends Controller
             'data' => [
                 'admin' => [
                     'id' => $admin->id,
-                    'name' => $admin->name,
                     'email' => $admin->email,
                     'created_at' => $admin->created_at,
                 ]

@@ -40,22 +40,6 @@ export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEm
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-
-                                    <Input
-                                        id="name"
-                                        className="mt-1 block w-full"
-                                        defaultValue={admin.name}
-                                        name="name"
-                                        required
-                                        autoComplete="name"
-                                        placeholder="Full name"
-                                    />
-
-                                    <InputError className="mt-2" message={errors.name} />
-                                </div>
-
-                                <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
 
                                     <Input

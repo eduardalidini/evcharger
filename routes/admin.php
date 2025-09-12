@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\ReceiptController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\Settings\AdminProfileController;
 use App\Http\Controllers\Admin\Settings\AdminPasswordController;
@@ -25,6 +26,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [AdminDashboardController::class, 'index']);
         
         Route::resource('users', UserManagementController::class);
+        Route::resource('receipts', ReceiptController::class);
+        
+        // Additional receipt routes
+        Route::post('receipts/{receipt}/generate-pdf', [ReceiptController::class, 'generatePdf'])->name('receipts.generate-pdf');
+        Route::get('receipts/{receipt}/view-pdf', [ReceiptController::class, 'viewPdf'])->name('receipts.view-pdf');
+        Route::get('receipts/{receipt}/download-pdf', [ReceiptController::class, 'downloadPdf'])->name('receipts.download-pdf');
+        Route::delete('receipts/{receipt}/force', [ReceiptController::class, 'forceDestroy'])->name('receipts.force-destroy');
         
         // Admin Settings
         Route::redirect('settings', '/admin/settings/profile');
