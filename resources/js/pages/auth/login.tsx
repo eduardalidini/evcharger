@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface LoginProps {
     status?: string;
@@ -17,11 +18,61 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const { data, setData } = useForm({
+        email: '',
+        password: '',
+        remember: false,
+    });
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('userLoginEmail');
+        const savedPassword = localStorage.getItem('userLoginPassword');
+        const savedRemember = localStorage.getItem('userLoginRemember') === 'true';
+
+        if (savedEmail) {
+            setData('email', savedEmail);
+        }
+        if (savedPassword) {
+            setData('password', savedPassword);
+        }
+        if (savedRemember) {
+            setData('remember', savedRemember);
+        }
+    }, []);
+
+    const handleRememberChange = (checked: boolean) => {
+        setData('remember', checked);
+        
+        if (checked) {
+            localStorage.setItem('userLoginEmail', data.email);
+            localStorage.setItem('userLoginPassword', data.password);
+            localStorage.setItem('userLoginRemember', 'true');
+        } else {
+            localStorage.removeItem('userLoginEmail');
+            localStorage.removeItem('userLoginPassword');
+            localStorage.removeItem('userLoginRemember');
+        }
+    };
+
+    const handleEmailChange = (value: string) => {
+        setData('email', value);
+        if (data.remember) {
+            localStorage.setItem('userLoginEmail', value);
+        }
+    };
+
+    const handlePasswordChange = (value: string) => {
+        setData('password', value);
+        if (data.remember) {
+            localStorage.setItem('userLoginPassword', value);
+        }
+    };
+
     return (
         <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
             <Head title="Log in" />
 
-            <Form {...AuthenticatedSessionController.store.form()} resetOnSuccess={['password']} className="flex flex-col gap-6">
+            <Form {...AuthenticatedSessionController.store.form()} className="flex flex-col gap-6">
                 {({ processing, errors }) => (
                     <>
                         <div className="grid gap-6">
@@ -31,11 +82,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     id="email"
                                     type="email"
                                     name="email"
+                                    defaultValue={data.email}
                                     required
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    onChange={(e) => handleEmailChange(e.target.value)}
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -53,16 +106,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     id="password"
                                     type="password"
                                     name="password"
+                                    defaultValue={data.password}
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Password"
+                                    onChange={(e) => handlePasswordChange(e.target.value)}
                                 />
                                 <InputError message={errors.password} />
                             </div>
 
                             <div className="flex items-center space-x-3">
-                                <Checkbox id="remember" name="remember" tabIndex={3} />
+                                <Checkbox id="remember" name="remember" checked={data.remember} value="true" tabIndex={3} onCheckedChange={(checked) => handleRememberChange(checked as boolean)} />
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 

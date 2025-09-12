@@ -124,16 +124,32 @@ class UserReceipt extends Model
     /**
      * Generate unique receipt number.
      */
-    public static function generateReceiptNumber(): string
+    public static function generateReceiptNumber($user = null): string
     {
-        $prefix = 'EVC-' . now()->format('Y') . '-';
-        $latest = static::whereYear('created_at', now()->year)
-            ->latest('id')
-            ->first();
-        
-        $number = $latest ? (int) substr($latest->receipt_number, -4) + 1 : 1;
-        
-        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+        if ($user) {
+            $userName = $user->name . $user->surname;
+            $userName = preg_replace('/[^a-zA-Z0-9]/', '', $userName); // Remove special chars
+            $dateTime = now()->setTimezone('Europe/Tirane')->format('dmY_Hi'); // 12092025_1430
+            
+            $prefix = $userName . '_' . $dateTime . '_';
+            $latest = static::where('receipt_number', 'like', $prefix . '%')
+                ->latest('id')
+                ->first();
+            
+            $number = $latest ? (int) substr($latest->receipt_number, strrpos($latest->receipt_number, '_') + 1) + 1 : 1;
+            
+            return $prefix . str_pad($number, 3, '0', STR_PAD_LEFT);
+        } else {
+            // Fallback to old format if no user provided
+            $prefix = 'EVC-' . now()->format('Y') . '-';
+            $latest = static::whereYear('created_at', now()->year)
+                ->latest('id')
+                ->first();
+            
+            $number = $latest ? (int) substr($latest->receipt_number, -4) + 1 : 1;
+            
+            return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+        }
     }
 
     /**

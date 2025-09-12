@@ -7,6 +7,7 @@ import AdminAuthLayout from '@/layouts/admin/admin-auth-layout';
 import { Head, useForm } from '@inertiajs/react';
 import { store as loginStore } from '@/routes/admin/login';
 import { LoaderCircle } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface AdminLoginProps {
     status?: string;
@@ -18,6 +19,50 @@ export default function AdminLogin({ status }: AdminLoginProps) {
         password: '',
         remember: false,
     });
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('adminLoginEmail');
+        const savedPassword = localStorage.getItem('adminLoginPassword');
+        const savedRemember = localStorage.getItem('adminLoginRemember') === 'true';
+
+        if (savedEmail) {
+            setData('email', savedEmail);
+        }
+        if (savedPassword) {
+            setData('password', savedPassword);
+        }
+        if (savedRemember) {
+            setData('remember', savedRemember);
+        }
+    }, []);
+
+    const handleRememberChange = (checked: boolean) => {
+        setData('remember', checked);
+        
+        if (checked) {
+            localStorage.setItem('adminLoginEmail', data.email);
+            localStorage.setItem('adminLoginPassword', data.password);
+            localStorage.setItem('adminLoginRemember', 'true');
+        } else {
+            localStorage.removeItem('adminLoginEmail');
+            localStorage.removeItem('adminLoginPassword');
+            localStorage.removeItem('adminLoginRemember');
+        }
+    };
+
+    const handleEmailChange = (value: string) => {
+        setData('email', value);
+        if (data.remember) {
+            localStorage.setItem('adminLoginEmail', value);
+        }
+    };
+
+    const handlePasswordChange = (value: string) => {
+        setData('password', value);
+        if (data.remember) {
+            localStorage.setItem('adminLoginPassword', value);
+        }
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,7 +81,7 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                             id="email"
                             type="email"
                             value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
+                            onChange={(e) => handleEmailChange(e.target.value)}
                             required
                             autoFocus
                             tabIndex={1}
@@ -52,7 +97,7 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                             id="password"
                             type="password"
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
+                            onChange={(e) => handlePasswordChange(e.target.value)}
                             required
                             tabIndex={2}
                             autoComplete="current-password"
@@ -65,7 +110,7 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                         <Checkbox 
                             id="remember" 
                             checked={data.remember}
-                            onCheckedChange={(checked) => setData('remember', checked as boolean)}
+                            onCheckedChange={(checked) => handleRememberChange(checked as boolean)}
                             tabIndex={3} 
                         />
                         <Label htmlFor="remember">Remember me</Label>

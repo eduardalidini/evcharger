@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminReceipt;
-use App\Models\UserReceipt;
 use App\Models\User;
+use App\Models\UserReceipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -167,8 +167,11 @@ class ReceiptController extends Controller
             // Calculate total amount
             $validated['total_amount'] = ($validated['amount'] ?? 0) + ($validated['tax_amount'] ?? 0);
             
-            // Generate receipt number
-            $validated['receipt_number'] = AdminReceipt::generateReceiptNumber();
+            // Get user for receipt number generation
+            $user = User::find($validated['user_id']);
+            
+            // Generate receipt number with user info
+            $validated['receipt_number'] = AdminReceipt::generateReceiptNumber($user);
             
             // Set admin_id
             $validated['admin_id'] = Auth::guard('admin')->id();
