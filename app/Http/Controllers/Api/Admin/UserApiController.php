@@ -69,6 +69,7 @@ class UserApiController extends Controller
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['balance'] = $validated['balance'] ?? 0.00;
+        $validated['isBusiness'] = !empty($validated['nipt']); // Set to true if NIPT is provided
 
         $user = User::create($validated);
 
@@ -111,6 +112,8 @@ class UserApiController extends Controller
         } else {
             $validated['password'] = Hash::make($validated['password']);
         }
+
+        $validated['isBusiness'] = !empty($validated['nipt']); // Set to true if NIPT is provided
 
         $user->update($validated);
 

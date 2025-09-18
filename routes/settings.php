@@ -21,4 +21,20 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/appearance');
     })->name('appearance');
+
+    Route::get('settings/language', function () {
+        return Inertia::render('settings/language');
+    })->name('language');
+
+    Route::post('settings/language', function () {
+        // Handle language preference storage
+        $language = request('language');
+        
+        if (in_array($language, ['en', 'sq'])) {
+            session(['locale' => $language]);
+            return back()->with('success', 'Language updated successfully');
+        }
+        
+        return back()->withErrors(['language' => 'Invalid language selection']);
+    })->name('language.update');
 });

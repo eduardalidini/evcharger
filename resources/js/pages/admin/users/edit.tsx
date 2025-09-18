@@ -6,7 +6,7 @@ import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
-import { index as usersIndex, edit as usersEdit, update as usersUpdate } from '@/routes/admin/users';
+import { index as usersIndex, show as usersShow, edit as usersEdit, update as usersUpdate } from '@/routes/admin/users';
 import { LoaderCircle } from 'lucide-react';
 
 interface User {
@@ -18,6 +18,7 @@ interface User {
     email: string;
     nipt: string | null;
     balance: number;
+    user_type: 'individual' | 'business';
 }
 
 interface EditUserProps {
@@ -25,6 +26,7 @@ interface EditUserProps {
 }
 
 export default function EditUser({ user }: EditUserProps) {
+    const fromView = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'view';
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Admin Dashboard',
@@ -47,13 +49,23 @@ export default function EditUser({ user }: EditUserProps) {
         phone_no: user.phone_no,
         email: user.email,
         nipt: user.nipt || '',
-        balance: user.balance.toString(),
+        // balance is treated as a delta: e.g., +500 or -500
+        balance: '',
         password: '',
     });
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(usersUpdate(user.id).url);
+        
+        // Clear NIPT for individual users before submitting
+        if (user.user_type === 'individual') {
+            setData('nipt', '');
+        }
+        
+        const url = fromView
+            ? usersUpdate.url(user.id, { query: { from: 'view', type: user.user_type } })
+            : usersUpdate(user.id, { query: { type: user.user_type } }).url;
+        put(url);
     };
 
     return (
@@ -62,8 +74,8 @@ export default function EditUser({ user }: EditUserProps) {
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold">Edit User: {user.name} {user.surname}</h1>
-                    <Link href={usersIndex().url}>
-                        <Button variant="outline">Back to Users</Button>
+                    <Link href={fromView ? usersShow(user.id, { query: { type: user.user_type } }).url : usersIndex().url}>
+                        <Button variant="outline">{fromView ? 'Back to View' : 'Back to Users'}</Button>
                     </Link>
                 </div>
 
@@ -137,31 +149,35 @@ export default function EditUser({ user }: EditUserProps) {
                                     <InputError message={errors.email} />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="nipt">NIPT (Optional)</Label>
-                                    <Input
-                                        id="nipt"
-                                        type="text"
-                                        value={data.nipt}
-                                        onChange={(e) => setData('nipt', e.target.value)}
-                                        placeholder="Business NIPT number"
-                                    />
-                                    <InputError message={errors.nipt} />
-                                </div>
+                                {/* NIPT field - only show for business users */}
+                                {user.user_type === 'business' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="nipt">NIPT</Label>
+                                        <Input
+                                            id="nipt"
+                                            type="text"
+                                            value={data.nipt}
+                                            onChange={(e) => setData('nipt', e.target.value)}
+                                            required
+                                            placeholder="Business NIPT number"
+                                        />
+                                        <InputError message={errors.nipt} />
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="balance">Balance (€)</Label>
+                                    <Label htmlFor="balance">Balance (ALL)</Label>
                                     <Input
                                         id="balance"
                                         type="number"
-                                        min="0"
                                         step="0.01"
                                         value={data.balance}
                                         onChange={(e) => setData('balance', e.target.value)}
-                                        required
-                                        placeholder="0.00"
+                                        placeholder="e.g. +500 or -500"
                                     />
                                     <InputError message={errors.balance} />
+                                    <p className="text-sm text-muted-foreground">Enter a signed amount to adjust wallet. +500 adds, -500 removes. Default currency: ALL.</p>
+                                    <p className="text-xs text-muted-foreground">Current balance: <span className="font-semibold">{Number(user.balance ?? 0).toFixed(2)} ALL</span></p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -185,10 +201,8 @@ export default function EditUser({ user }: EditUserProps) {
                                     {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                                     Update User
                                 </Button>
-                                <Link href={usersIndex().url}>
-                                    <Button type="button" variant="outline">
-                                        Cancel
-                                    </Button>
+                                <Link href={fromView ? usersShow(user.id, { query: { type: user.user_type } }).url : usersIndex().url}>
+                                    <Button type="button" variant="outline">Cancel</Button>
                                 </Link>
                             </div>
                         </form>

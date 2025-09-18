@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UserReceipt;
+use App\Models\AdminReceipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -20,7 +20,7 @@ class ReceiptController extends Controller
         $status = $request->get('status');
         
         try {
-            $receipts = UserReceipt::query()
+            $receipts = AdminReceipt::query()
                 ->where('user_id', Auth::id())
                 ->notDeleted()
                 ->with(['admin:id,email'])
@@ -80,7 +80,7 @@ class ReceiptController extends Controller
     /**
      * Display the specified receipt.
      */
-    public function show(UserReceipt $receipt): Response
+    public function show(AdminReceipt $receipt): Response
     {
         // Ensure user can only view their own receipts
         if ($receipt->user_id !== Auth::id()) {
@@ -97,12 +97,16 @@ class ReceiptController extends Controller
     /**
      * View PDF for the specified receipt.
      */
-    public function viewPdf(UserReceipt $receipt)
+    public function viewPdf(AdminReceipt $receipt)
     {
         // Ensure user can only view their own receipts
         if ($receipt->user_id !== Auth::id()) {
             abort(403, 'Unauthorized');
         }
+
+        // Set locale from user's preference or session
+        $locale = Auth::user()->locale ?? session('locale', 'en');
+        app()->setLocale($locale);
 
         if (!$receipt->pdf_base64) {
             // Generate PDF if it doesn't exist
@@ -130,12 +134,16 @@ class ReceiptController extends Controller
     /**
      * Download PDF for the specified receipt.
      */
-    public function downloadPdf(UserReceipt $receipt)
+    public function downloadPdf(AdminReceipt $receipt)
     {
         // Ensure user can only download their own receipts
         if ($receipt->user_id !== Auth::id()) {
             abort(403, 'Unauthorized');
         }
+
+        // Set locale from user's preference or session
+        $locale = Auth::user()->locale ?? session('locale', 'en');
+        app()->setLocale($locale);
 
         if (!$receipt->pdf_base64) {
             // Generate PDF if it doesn't exist
@@ -163,7 +171,7 @@ class ReceiptController extends Controller
     /**
      * Remove the specified receipt from user view (soft delete).
      */
-    public function destroy(UserReceipt $receipt)
+    public function destroy(AdminReceipt $receipt)
     {
         // Ensure user can only delete their own receipts
         if ($receipt->user_id !== Auth::id()) {

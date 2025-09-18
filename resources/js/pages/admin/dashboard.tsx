@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
 import { Users, Receipt, DollarSign, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface User {
     id: number;
@@ -28,20 +29,13 @@ interface AdminDashboardProps {
         id: number;
         receipt_number: string;
         user: User;
-        type: 'receipt' | 'invoice';
+        type: 'receipt';
         total_amount: number;
         currency: string;
         status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
         created_at: string;
     }>;
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Admin Dashboard',
-        href: dashboard().url,
-    },
-];
 
 export default function AdminDashboard({ 
     total_users, 
@@ -51,9 +45,18 @@ export default function AdminDashboard({
     pending_receipts, 
     recent_receipts 
 }: AdminDashboardProps) {
+    const { t } = useTranslation();
+    
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: t('admin.dashboard.title'),
+            href: dashboard().url,
+        },
+    ];
+
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Admin Dashboard" />
+            <Head title={t('admin.dashboard.title')} />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 {/* Stats */}
                 <div className="grid auto-rows-min gap-4 md:grid-cols-4">

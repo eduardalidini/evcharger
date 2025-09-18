@@ -13,24 +13,26 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { edit } from '@/routes/profile';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: edit().url,
-    },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { auth } = usePage<SharedData>().props;
+    const { t } = useTranslation();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: t('settings.profile.title'),
+            href: edit().url,
+        },
+    ];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profile settings" />
+            <Head title={t('settings.profile.title')} />
 
             <SettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Profile information" description="Update your personal information and account details" />
+                    <HeadingSmall title={t('settings.profile.informationTitle')} description={t('settings.profile.informationDescription')} />
 
                     <Form
                         {...ProfileController.update.form()}
@@ -43,7 +45,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="name">First Name</Label>
+                                        <Label htmlFor="name">{t('settings.profile.firstName')}</Label>
 
                                         <Input
                                             id="name"
@@ -52,14 +54,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             name="name"
                                             required
                                             autoComplete="given-name"
-                                            placeholder="First name"
+                                            placeholder={t('settings.profile.firstNamePlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.name} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="surname">Last Name</Label>
+                                        <Label htmlFor="surname">{t('settings.profile.lastName')}</Label>
 
                                         <Input
                                             id="surname"
@@ -68,14 +70,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             name="surname"
                                             required
                                             autoComplete="family-name"
-                                            placeholder="Last name"
+                                            placeholder={t('settings.profile.lastNamePlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.surname} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="id_number">ID Number</Label>
+                                        <Label htmlFor="id_number">{t('settings.profile.idNumber')}</Label>
 
                                         <Input
                                             id="id_number"
@@ -83,14 +85,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             defaultValue={(auth.user as any).id_number || ''}
                                             name="id_number"
                                             required
-                                            placeholder="National ID number"
+                                            placeholder={t('settings.profile.idNumberPlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.id_number} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="phone_no">Phone Number</Label>
+                                        <Label htmlFor="phone_no">{t('settings.profile.phoneNumber')}</Label>
 
                                         <Input
                                             id="phone_no"
@@ -100,14 +102,14 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             name="phone_no"
                                             required
                                             autoComplete="tel"
-                                            placeholder="+355 69 123 4567"
+                                            placeholder={t('settings.profile.phoneNumberPlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.phone_no} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="email">Email Address</Label>
+                                        <Label htmlFor="email">{t('settings.profile.emailAddress')}</Label>
 
                                         <Input
                                             id="email"
@@ -117,21 +119,21 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                             name="email"
                                             required
                                             autoComplete="email"
-                                            placeholder="Email address"
+                                            placeholder={t('settings.profile.emailAddressPlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.email} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="nipt">NIPT (Optional)</Label>
+                                        <Label htmlFor="nipt">{t('settings.profile.nipt')}</Label>
 
                                         <Input
                                             id="nipt"
                                             className="mt-1 block w-full"
                                             defaultValue={(auth.user as any).nipt || ''}
                                             name="nipt"
-                                            placeholder="Business NIPT number"
+                                            placeholder={t('settings.profile.niptPlaceholder')}
                                         />
 
                                         <InputError className="mt-2" message={errors.nipt} />
@@ -139,7 +141,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="balance">Account Balance (€)</Label>
+                                    <Label htmlFor="balance">{t('settings.profile.accountBalance')}</Label>
                                     <Input
                                         id="balance"
                                         type="text"
@@ -148,32 +150,32 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                         readOnly
                                         disabled
                                     />
-                                    <p className="text-sm text-muted-foreground">Your current account balance</p>
+                                    <p className="text-sm text-muted-foreground">{t('settings.profile.currentBalance')}</p>
                                 </div>
 
                                 {mustVerifyEmail && auth.user.email_verified_at === null && (
                                     <div>
                                         <p className="-mt-4 text-sm text-muted-foreground">
-                                            Your email address is unverified.{' '}
+                                            {t('settings.profile.emailUnverified')}{' '}
                                             <Link
                                                 href={send()}
                                                 as="button"
                                                 className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                                             >
-                                                Click here to resend the verification email.
+                                                {t('settings.profile.resendVerification')}
                                             </Link>
                                         </p>
 
                                         {status === 'verification-link-sent' && (
                                             <div className="mt-2 text-sm font-medium text-green-600">
-                                                A new verification link has been sent to your email address.
+                                                {t('settings.profile.verificationSent')}
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 <div className="flex items-center gap-4">
-                                    <Button disabled={processing}>Save</Button>
+                                    <Button disabled={processing}>{t('settings.profile.save')}</Button>
 
                                     <Transition
                                         show={recentlySuccessful}
@@ -182,7 +184,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                         leave="transition ease-in-out"
                                         leaveTo="opacity-0"
                                     >
-                                        <p className="text-sm text-neutral-600">Saved</p>
+                                        <p className="text-sm text-neutral-600">{t('settings.profile.saved')}</p>
                                     </Transition>
                                 </div>
                             </>

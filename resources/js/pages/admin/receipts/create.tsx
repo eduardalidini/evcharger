@@ -5,9 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Plus, Minus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface User {
     id: number;
@@ -16,27 +18,47 @@ interface User {
     email: string;
 }
 
+// services removed
+
+interface BusinessInfo {
+    id: number;
+    business_name: string;
+    business_number: string;
+    vat_number: string;
+    business_address: string;
+    is_default: boolean;
+}
+
 interface CreateReceiptProps {
     users: User[];
+    businessInfo: BusinessInfo[];
+    businessInfoMissing?: boolean;
+    businessCreateUrl?: string;
 }
 
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Admin Dashboard',
-        href: dashboard().url,
-    },
-    {
-        title: 'Receipts & Invoices',
-        href: '/admin/receipts',
-    },
-    {
-        title: 'Create Receipt',
-        href: '/admin/receipts/create',
-    },
-];
-
-export default function CreateReceipt({ users }: CreateReceiptProps) {
+export default function CreateReceipt({ users, businessInfo, businessInfoMissing, businessCreateUrl }: CreateReceiptProps) {
+    const { t } = useTranslation();
+    const isBusinessMissing = businessInfoMissing ?? businessInfo.length === 0;
+    
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: t('admin.navigation.dashboard'),
+            href: dashboard().url,
+        },
+        {
+            title: t('admin.navigation.receipts'),
+            href: '/admin/receipts',
+        },
+        {
+            title: t('receipts.create'),
+            href: '/admin/receipts/create',
+        },
+    ];
+    // services removed
+    const [selectedBusinessId, setSelectedBusinessId] = useState<number | null>(
+        businessInfo.find(b => b.is_default)?.id || businessInfo[0]?.id || null
+    );
 
     const { data, setData, post, processing, errors } = useForm({
         user_id: '',
@@ -67,23 +89,56 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
         issued_at: '',
         due_date: '',
         notes: '',
+        // services removed
     });
+
+
+    // services removed
+
+    // Update business information when selected business changes
+    useEffect(() => {
+        if (selectedBusinessId) {
+            const selectedBusiness = businessInfo.find(b => b.id === selectedBusinessId);
+            if (selectedBusiness) {
+                setData('business_name', selectedBusiness.business_name);
+                setData('business_number', selectedBusiness.business_number);
+                setData('business_vat', selectedBusiness.vat_number);
+                setData('business_address', selectedBusiness.business_address);
+            }
+        }
+    }, [selectedBusinessId, businessInfo]);
+
+    // services removed
+
+    // services removed
+
+    // services removed
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Calculate the final amount to send
-        const finalAmount = evChargingAmount > 0 ? evChargingAmount : (parseFloat(data.amount) || 0);
+        // Calculate the final amounts
+        const baseAmount = evChargingAmount > 0 ? evChargingAmount : (parseFloat(data.amount) || 0);
+        const finalAmount = baseAmount;
         const finalTaxAmount = data.tax_amount || calculatedTax;
+        const finalTotal = finalAmount + parseFloat(finalTaxAmount.toString());
         
-        // Update form data with calculated values
-        setData('amount', finalAmount.toString());
-        setData('tax_amount', finalTaxAmount.toString());
-        setData('total_amount', (finalAmount + parseFloat(finalTaxAmount.toString())).toString());
+        // Create updated form data with calculated values
+        const submissionData = {
+            ...data,
+            amount: finalAmount.toString(),
+            tax_amount: finalTaxAmount.toString(),
+            total_amount: finalTotal.toString(),
+            // services removed
+        };
         
-        console.log('Submitting receipt with data:', { ...data, amount: finalAmount, tax_amount: finalTaxAmount });
-        
-        post('/admin/receipts', {
+        console.log('Submitting receipt with data:', submissionData);
+
+        const formData: Record<string, any> = {
+            ...submissionData,
+        };
+
+        router.post('/admin/receipts', formData, {
             onSuccess: (page) => {
                 console.log('Receipt created successfully', page);
             },
@@ -97,10 +152,12 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
     };
 
 
-    // Calculate amounts based on EV charging or manual amount
+    // Calculate amounts based on EV charging, manual amount only
     const evChargingAmount = (parseFloat(data.kwh_consumed) || 0) * (parseFloat(data.rate_per_kwh) || 0);
     const manualAmount = parseFloat(data.amount) || 0;
-    const subtotal = evChargingAmount > 0 ? evChargingAmount : manualAmount;
+    
+    const baseAmount = evChargingAmount > 0 ? evChargingAmount : manualAmount;
+    const subtotal = baseAmount;
     
     // Auto-calculate tax if rate is provided
     const calculatedTax = subtotal * ((parseFloat(data.tax_rate_percentage) || 0) / 100);
@@ -112,64 +169,91 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
             <Head title="Create Receipt" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">Create New Receipt/Invoice</h1>
+                    <h1 className="text-2xl font-bold">{t('receipts.createNew')}</h1>
                     <Link href="/admin/receipts">
-                        <Button variant="outline">Back to Receipts</Button>
+                        <Button variant="outline">{t('receipts.backToReceipts')}</Button>
                     </Link>
                 </div>
 
                 <div className="max-w-4xl">
+                    {isBusinessMissing && (
+                        <div className="mb-4 rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                            {t('receipts.businessInfoMissing')}
+                            {businessCreateUrl && (
+                                <span className="ml-2">
+                                    <Link className="underline font-medium" href={businessCreateUrl}>{t('receipts.addBusinessInfo')}</Link>
+                                </span>
+                            )}
+                        </div>
+                    )}
                     <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
                         <form onSubmit={submit} className="space-y-6">
+                            <fieldset disabled={isBusinessMissing} className={isBusinessMissing ? 'opacity-60 pointer-events-none' : ''}>
                             {/* Business Information */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold border-b pb-2">Business Information</h3>
+                                <h3 className="text-lg font-semibold border-b pb-2">{t('receipts.businessInformation')}</h3>
+                                
+                                <div className="space-y-2">
+                                    <Label htmlFor="business_select">{t('receipts.selectBusiness')}</Label>
+                                    <Select value={selectedBusinessId?.toString() || ''} onValueChange={(value) => setSelectedBusinessId(parseInt(value))}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={t('receipts.selectBusiness')} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {businessInfo.map((business) => (
+                                                <SelectItem key={business.id} value={business.id.toString()}>
+                                                    {business.business_name} {business.is_default && '(Default)'}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="business_name">Business Name</Label>
+                                        <Label htmlFor="business_name">{t('receipts.businessName')}</Label>
                                         <Input
                                             id="business_name"
                                             type="text"
                                             value={data.business_name}
-                                            onChange={(e: any) => setData('business_name', e.target.value)}
-                                            placeholder="EV Charging Station"
+                                            readOnly
+                                            className="bg-muted"
                                         />
                                         <InputError message={errors.business_name} />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="business_number">Business Number</Label>
+                                        <Label htmlFor="business_number">{t('receipts.businessNumber')}</Label>
                                         <Input
                                             id="business_number"
                                             type="text"
                                             value={data.business_number}
-                                            onChange={(e: any) => setData('business_number', e.target.value)}
-                                            placeholder="Business registration number"
+                                            readOnly
+                                            className="bg-muted"
                                         />
                                         <InputError message={errors.business_number} />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="business_vat">VAT Number</Label>
+                                        <Label htmlFor="business_vat">{t('receipts.vatNumber')}</Label>
                                         <Input
                                             id="business_vat"
                                             type="text"
                                             value={data.business_vat}
-                                            onChange={(e: any) => setData('business_vat', e.target.value)}
-                                            placeholder="VAT identification number"
+                                            readOnly
+                                            className="bg-muted"
                                         />
                                         <InputError message={errors.business_vat} />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="business_address">Business Address</Label>
+                                        <Label htmlFor="business_address">{t('receipts.businessAddress')}</Label>
                                         <textarea
                                             id="business_address"
                                             value={data.business_address}
-                                            onChange={(e: any) => setData('business_address', e.target.value)}
-                                            placeholder="Complete business address"
+                                            readOnly
                                             rows={2}
-                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="flex min-h-[80px] w-full rounded-md border border-input bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
                                         <InputError message={errors.business_address} />
                                     </div>
@@ -178,13 +262,13 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
 
                             {/* Basic Information */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold border-b pb-2">Receipt Information</h3>
+                                <h3 className="text-lg font-semibold border-b pb-2">{t('receipts.receiptInformation')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="user_id">User</Label>
+                                    <Label htmlFor="user_id">{t('receipts.user')}</Label>
                                     <Select value={data.user_id} onValueChange={(value) => setData('user_id', value)}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select user" />
+                                            <SelectValue placeholder={t('receipts.selectUser')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {users.length > 0 ? (
@@ -204,21 +288,20 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="type">Type</Label>
+                                    <Label htmlFor="type">{t('receipts.type')}</Label>
                                     <Select value={data.type} onValueChange={(value) => setData('type', value)}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="receipt">Receipt</SelectItem>
-                                            <SelectItem value="invoice">Invoice</SelectItem>
+                                            <SelectItem value="receipt">{t('receipts.receipt')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <InputError message={errors.type} />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="currency">Currency</Label>
+                                    <Label htmlFor="currency">{t('receipts.currency')}</Label>
                                     <Select value={data.currency} onValueChange={(value) => setData('currency', value)}>
                                         <SelectTrigger>
                                             <SelectValue />
@@ -233,24 +316,24 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="status">Status</Label>
+                                    <Label htmlFor="status">{t('receipts.status')}</Label>
                                     <Select value={data.status} onValueChange={(value: any ) => setData('status', value)}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="draft">Draft</SelectItem>
-                                            <SelectItem value="sent">Sent</SelectItem>
-                                            <SelectItem value="paid">Paid</SelectItem>
-                                            <SelectItem value="overdue">Overdue</SelectItem>
-                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                            <SelectItem value="draft">{t('receipts.draft')}</SelectItem>
+                                            <SelectItem value="sent">{t('receipts.sent')}</SelectItem>
+                                            <SelectItem value="paid">{t('receipts.paid')}</SelectItem>
+                                            <SelectItem value="overdue">{t('receipts.overdue')}</SelectItem>
+                                            <SelectItem value="cancelled">{t('receipts.cancelled')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <InputError message={errors.status} />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="issued_at">Issued Date</Label>
+                                    <Label htmlFor="issued_at">{t('receipts.issueDate')}</Label>
                                     <Input
                                         id="issued_at"
                                         type="datetime-local"
@@ -261,7 +344,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="due_date">Due Date</Label>
+                                    <Label htmlFor="due_date">{t('receipts.dueDate')}</Label>
                                     <Input
                                         id="due_date"
                                         type="datetime-local"
@@ -275,10 +358,10 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
 
                             {/* Vehicle Information */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold border-b pb-2">Vehicle Information</h3>
+                                <h3 className="text-lg font-semibold border-b pb-2">{t('receipts.vehicleInformation')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="vehicle_registration">Vehicle Registration</Label>
+                                        <Label htmlFor="vehicle_registration">{t('receipts.registration')}</Label>
                                         <Input
                                             id="vehicle_registration"
                                             type="text"
@@ -290,7 +373,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="vehicle_model">Vehicle Model</Label>
+                                        <Label htmlFor="vehicle_model">{t('receipts.model')}</Label>
                                         <Input
                                             id="vehicle_model"
                                             type="text"
@@ -305,10 +388,10 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
 
                             {/* EV Charging Details */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold border-b pb-2">EV Charging Details</h3>
+                                <h3 className="text-lg font-semibold border-b pb-2">{t('receipts.chargingDetails')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <Label htmlFor="charger_type">Charger Type</Label>
+                                        <Label htmlFor="charger_type">{t('receipts.chargerType')}</Label>
                                         <Select value={data.charger_type} onValueChange={(value) => setData('charger_type', value)}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select charger type" />
@@ -326,7 +409,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="charging_duration_minutes">Charging Duration (minutes)</Label>
+                                        <Label htmlFor="charging_duration_minutes">{t('receipts.chargingDuration')} (minuta)</Label>
                                         <Input
                                             id="charging_duration_minutes"
                                             type="number"
@@ -339,7 +422,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="rate_per_kwh">Rate Per kWh ({data.currency})</Label>
+                                        <Label htmlFor="rate_per_kwh">{t('receipts.ratePerKwh')} ({data.currency})</Label>
                                         <Input
                                             id="rate_per_kwh"
                                             type="number"
@@ -353,7 +436,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="kwh_consumed">kWh Consumed</Label>
+                                        <Label htmlFor="kwh_consumed">{t('receipts.energyConsumed')}</Label>
                                         <Input
                                             id="kwh_consumed"
                                             type="number"
@@ -367,7 +450,7 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="tax_rate_percentage">Tax Rate (%)</Label>
+                                        <Label htmlFor="tax_rate_percentage">{t('receipts.taxRate')} (%)</Label>
                                         <Input
                                             id="tax_rate_percentage"
                                             type="number"
@@ -383,14 +466,16 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                 </div>
                             </div>
 
+                            {/* services removed */}
+
                             {/* Description */}
                             <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">{t('receipts.description')}</Label>
                                 <textarea
                                     id="description"
                                     value={data.description}
                                     onChange={(e: any) => setData('description', e.target.value)}
-                                    placeholder="Enter description"
+                                    placeholder={t('receipts.descriptionPlaceholder')}
                                     rows={3}
                                     className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 />
@@ -401,25 +486,25 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                             {/* Payment Information */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="payment_method">Payment Method</Label>
+                                    <Label htmlFor="payment_method">{t('receipts.paymentMethod')}</Label>
                                     <Input
                                         id="payment_method"
                                         type="text"
                                         value={data.payment_method}
                                         onChange={(e) => setData('payment_method', e.target.value)}
-                                        placeholder="e.g., Cash, Card, Bank Transfer"
+                                        placeholder={t('receipts.paymentMethodPlaceholder')}
                                     />
                                     <InputError message={errors.payment_method} />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="payment_reference">Payment Reference</Label>
+                                    <Label htmlFor="payment_reference">{t('receipts.reference')}</Label>
                                     <Input
                                         id="payment_reference"
                                         type="text"
                                         value={data.payment_reference}
                                         onChange={(e) => setData('payment_reference', e.target.value)}
-                                        placeholder="Transaction ID, Check number, etc."
+                                        placeholder={t('receipts.referencePlaceholder')}
                                     />
                                     <InputError message={errors.payment_reference} />
                                 </div>
@@ -427,11 +512,11 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
 
                             {/* Amounts */}
                             <div className="space-y-4">
-                                <h3 className="text-lg font-semibold border-b pb-2">Amount Calculation</h3>
+                                <h3 className="text-lg font-semibold border-b pb-2">{t('receipts.amountCalculation')}</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/30 p-4 rounded-lg">
                                     <div className="space-y-2">
                                         <Label htmlFor="amount">
-                                            Subtotal ({data.currency})
+                                            {t('receipts.baseAmount')} ({data.currency})
                                             {evChargingAmount > 0 && <span className="text-sm text-muted-foreground ml-1">(Auto-calculated)</span>}
                                         </Label>
                                         <Input
@@ -446,11 +531,12 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                                             placeholder="0.00"
                                         />
                                         <InputError message={errors.amount} />
+                                        {/* services removed */}
                                     </div>
 
                                     <div className="space-y-2">
                                         <Label htmlFor="tax_amount">
-                                            Tax Amount ({data.currency})
+                                            {t('receipts.taxAmount')} ({data.currency})
                                             {calculatedTax > 0 && <span className="text-sm text-muted-foreground ml-1">(Auto-calculated)</span>}
                                         </Label>
                                         <Input
@@ -476,12 +562,12 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
 
                             {/* Notes */}
                             <div className="space-y-2">
-                                <Label htmlFor="notes">Notes</Label>
+                                <Label htmlFor="notes">{t('receipts.notes')}</Label>
                                 <textarea
                                     id="notes"
                                     value={data.notes}
                                     onChange={(e: any) => setData('notes', e.target.value)}
-                                    placeholder="Additional notes"
+                                    placeholder={t('receipts.additionalNotesPlaceholder')}
                                     rows={3}
                                     className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 />
@@ -489,16 +575,17 @@ export default function CreateReceipt({ users }: CreateReceiptProps) {
                             </div>
 
                             <div className="flex items-center gap-4 pt-4">
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit" disabled={processing || isBusinessMissing}>
                                     {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                                    Create {data.type === 'receipt' ? 'Receipt' : 'Invoice'}
+                                    {t('receipts.create')}
                                 </Button>
                                 <Link href="/admin/receipts">
                                     <Button type="button" variant="outline">
-                                        Cancel
+                                        {t('common.cancel')}
                                     </Button>
                                 </Link>
                             </div>
+                            </fieldset>
                         </form>
                     </div>
                 </div>

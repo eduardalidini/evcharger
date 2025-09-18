@@ -6,28 +6,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form } from '@inertiajs/react';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export default function DeleteAdmin() {
     const passwordInput = useRef<HTMLInputElement>(null);
+    const { t } = useTranslation();
 
     return (
         <div className="space-y-6">
-            <HeadingSmall title="Delete account" description="Delete your admin account and all of its resources" />
+            <HeadingSmall title={t('settings.deleteAccount.title')} description={t('settings.deleteAccount.adminDescription')} />
             <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
                 <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
-                    <p className="font-medium">Warning</p>
-                    <p className="text-sm">Please proceed with caution, this cannot be undone.</p>
+                    <p className="font-medium">{t('settings.deleteAccount.warning')}</p>
+                    <p className="text-sm">{t('settings.deleteAccount.warningMessage')}</p>
                 </div>
 
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="destructive">Delete admin account</Button>
+                        <Button variant="destructive">{t('settings.deleteAccount.deleteAdminButton')}</Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogTitle>Are you sure you want to delete your admin account?</DialogTitle>
+                        <DialogTitle>{t('settings.deleteAccount.confirmAdminTitle')}</DialogTitle>
                         <DialogDescription>
-                            Once your admin account is deleted, all of its resources and data will also be permanently deleted. Please enter your password
-                            to confirm you would like to permanently delete your admin account.
+                            {t('settings.deleteAccount.confirmAdminDescription')}
                         </DialogDescription>
 
                         <Form
@@ -44,7 +45,7 @@ export default function DeleteAdmin() {
                                 <>
                                     <div className="grid gap-2">
                                         <Label htmlFor="password" className="sr-only">
-                                            Password
+                                            {t('settings.password.currentPassword')}
                                         </Label>
 
                                         <Input
@@ -52,7 +53,7 @@ export default function DeleteAdmin() {
                                             type="password"
                                             name="password"
                                             ref={passwordInput}
-                                            placeholder="Password"
+                                            placeholder={t('settings.password.currentPasswordPlaceholder')}
                                             autoComplete="current-password"
                                         />
 
@@ -62,12 +63,12 @@ export default function DeleteAdmin() {
                                     <DialogFooter className="gap-2">
                                         <DialogClose asChild>
                                             <Button variant="secondary" onClick={() => resetAndClearErrors()}>
-                                                Cancel
+                                                {t('common.cancel')}
                                             </Button>
                                         </DialogClose>
 
                                         <Button variant="destructive" disabled={processing} asChild>
-                                            <button type="submit">Delete admin account</button>
+                                            <button type="submit">{t('settings.deleteAccount.deleteAdminButton')}</button>
                                         </Button>
                                     </DialogFooter>
                                 </>

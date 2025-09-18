@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
+use Tighten\Ziggy\Ziggy;
 
 class ShareAdminData
 {
@@ -18,6 +19,11 @@ class ShareAdminData
         Inertia::share([
             'admin' => function () {
                 return Auth::guard('admin')->user();
+            },
+            'ziggy' => function () use ($request) {
+                return array_merge((new Ziggy)->toArray(), [
+                    'location' => $request->url(),
+                ]);
             },
         ]);
 

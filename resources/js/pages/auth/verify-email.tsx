@@ -4,18 +4,26 @@ import { logout } from '@/routes';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 
+import LanguageSelector from '@/components/language-selector';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/auth-layout';
+import { useTranslation } from 'react-i18next';
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const { t } = useTranslation();
+
     return (
-        <AuthLayout title="Verify email" description="Please verify your email address by clicking on the link we just emailed to you.">
-            <Head title="Email verification" />
+        <AuthLayout title={t('auth.verifyEmail.title')} description={t('auth.verifyEmail.description')}>
+            <Head title={t('auth.verifyEmail.title')} />
+
+            <div className="flex justify-end mb-4">
+                <LanguageSelector variant="outline" size="sm" />
+            </div>
 
             {status === 'verification-link-sent' && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address you provided during registration.
+                    {t('auth.verifyEmail.linkSent')}
                 </div>
             )}
 
@@ -24,11 +32,11 @@ export default function VerifyEmail({ status }: { status?: string }) {
                     <>
                         <Button disabled={processing} variant="secondary">
                             {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                            Resend verification email
+                            {t('auth.verifyEmail.resendButton')}
                         </Button>
 
                         <TextLink href={logout()} className="mx-auto block text-sm">
-                            Log out
+                            {t('auth.verifyEmail.logoutButton')}
                         </TextLink>
                     </>
                 )}

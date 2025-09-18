@@ -44,6 +44,7 @@ class AdminReceipt extends Model
         'due_date',
         'pdf_base64',
         'notes',
+        // services removed
         'is_deleted',
     ];
 
@@ -61,6 +62,7 @@ class AdminReceipt extends Model
             'tax_rate_percentage' => 'decimal:2',
             'issued_at' => 'datetime',
             'due_date' => 'datetime',
+            // services removed
             'is_deleted' => 'boolean',
         ];
     }
@@ -85,18 +87,59 @@ class AdminReceipt extends Model
 
     /**
      * Get the user that owns the receipt.
+     * This is a dynamic method that checks both individual_users and business_users tables.
      */
-    public function user(): BelongsTo
+    public function user()
     {
-        return $this->belongsTo(User::class);
+        // First try to find in individual_users
+        $individualUser = IndividualUser::find($this->user_id);
+        if ($individualUser) {
+            $individualUser->user_type = 'individual';
+            $individualUser->nipt = null;
+            return $individualUser;
+        }
+        
+        // Then try business_users
+        $businessUser = BusinessUser::find($this->user_id);
+        if ($businessUser) {
+            $businessUser->user_type = 'business';
+            return $businessUser;
+        }
+        
+        return null;
     }
+
+    /**
+     * Legacy method maintained for backward compatibility
+     */
+    public function userRelation(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // services removed
 
     /**
      * Generate PDF and store as Base64.
      */
     public function generatePdf(): string
     {
-        $pdf = Pdf::loadView('receipts.pdf', ['receipt' => $this]);
+        $language = app()->getLocale();
+        
+        // Status translations
+        $statusTranslations = [
+            'draft' => $language === 'sq' ? 'Draft' : 'Draft',
+            'sent' => $language === 'sq' ? 'E dërguar' : 'Sent',
+            'paid' => $language === 'sq' ? 'E paguar' : 'Paid',
+            'overdue' => $language === 'sq' ? 'E vonuar' : 'Overdue',
+            'cancelled' => $language === 'sq' ? 'E anulluar' : 'Cancelled',
+        ];
+        
+        $pdf = Pdf::loadView('receipts.pdf_translated', [
+            'receipt' => $this,
+            'language' => $language,
+            'statusTranslations' => $statusTranslations
+        ]);
         $pdfContent = $pdf->output();
         $base64 = base64_encode($pdfContent);
         

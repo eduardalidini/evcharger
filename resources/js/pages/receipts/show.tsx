@@ -5,6 +5,7 @@ import { Head, Link } from '@inertiajs/react';
 import { dashboard } from '@/routes';
 import { Download, ArrowLeft, Receipt as ReceiptIcon, Calendar, CreditCard, Zap, Car, Trash2 } from 'lucide-react';
 import { router } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 interface Admin {
     id: number;
@@ -15,7 +16,7 @@ interface Receipt {
     id: number;
     receipt_number: string;
     admin: Admin;
-    type: 'receipt' | 'invoice';
+    type: 'receipt';
     // Business Information
     business_name: string;
     business_number: string | null;
@@ -60,17 +61,18 @@ const statusColors = {
 
 const typeColors = {
     receipt: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-    invoice: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
 };
 
 export default function ReceiptShow({ receipt }: ReceiptShowProps) {
+    const { t } = useTranslation();
+
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Dashboard',
+            title: t('navigation.dashboard'),
             href: dashboard().url,
         },
         {
-            title: 'My Receipts',
+            title: t('navigation.receipts'),
             href: '/receipts',
         },
         {
@@ -84,7 +86,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
     };
 
     const deleteReceipt = () => {
-        if (confirm('Are you sure you want to delete this receipt? This action cannot be undone.')) {
+        if (confirm(t('receipts.deleteConfirm'))) {
             router.delete(`/receipts/${receipt.id}`, {
                 onSuccess: () => {
                     // Redirect to receipts list after successful deletion
@@ -114,20 +116,20 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         <Link href="/receipts">
                             <Button variant="outline" size="sm">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back to Receipts
+                                {t('receipts.backToReceipts')}
                             </Button>
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold flex items-center gap-2">
                                 <ReceiptIcon className="h-6 w-6" />
-                                {receipt.type.charAt(0).toUpperCase() + receipt.type.slice(1)} #{receipt.receipt_number}
+                                {t(`receipts.${receipt.type}`)} #{receipt.receipt_number}
                             </h1>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-1 rounded-full text-xs capitalize ${typeColors[receipt.type]}`}>
-                                    {receipt.type}
+                                    {t(`receipts.${receipt.type}`)}
                                 </span>
                                 <span className={`px-2 py-1 rounded-full text-xs capitalize ${statusColors[receipt.status]}`}>
-                                    {receipt.status}
+                                    {t(`receipts.${receipt.status}`)}
                                 </span>
                             </div>
                         </div>
@@ -135,7 +137,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                     <div className="flex items-center gap-2">
                         <Button onClick={downloadPdf} className="flex items-center gap-2">
                             <Download className="h-4 w-4" />
-                            Download PDF
+                            {t('receipts.downloadPdf')}
                         </Button>
                         <Button 
                             onClick={deleteReceipt} 
@@ -144,7 +146,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            {t('common.delete')}
                         </Button>
                     </div>
                 </div>
@@ -156,27 +158,27 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
                             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Calendar className="h-5 w-5" />
-                                Receipt Information
+                                {t('receipts.receiptInformation')}
                             </h3>
                             <div className="grid gap-3">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Receipt Number:</span>
+                                    <span className="text-muted-foreground">{t('receipts.receiptNumber')}:</span>
                                     <span className="font-mono">{receipt.receipt_number}</span>
                                 </div>
                                 {receipt.issued_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Issue Date:</span>
+                                        <span className="text-muted-foreground">{t('receipts.issueDate')}:</span>
                                         <span>{new Date(receipt.issued_at).toLocaleDateString()}</span>
                                     </div>
                                 )}
                                 {receipt.due_date && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Due Date:</span>
+                                        <span className="text-muted-foreground">{t('receipts.dueDate')}:</span>
                                         <span>{new Date(receipt.due_date).toLocaleDateString()}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Created:</span>
+                                    <span className="text-muted-foreground">{t('receipts.created')}:</span>
                                     <span>{new Date(receipt.created_at).toLocaleDateString()}</span>
                                 </div>
                             </div>
@@ -185,20 +187,20 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         {/* Vehicle Information */}
                         {(receipt.vehicle_registration || receipt.vehicle_model) && (
                             <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
-                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <Car className="h-5 w-5" />
-                                    Vehicle Information
-                                </h3>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <Car className="h-5 w-5" />
+                                {t('receipts.vehicleInformation')}
+                            </h3>
                                 <div className="grid gap-3">
                                     {receipt.vehicle_registration && (
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Registration:</span>
+                                            <span className="text-muted-foreground">{t('receipts.registration')}:</span>
                                             <span className="font-medium">{receipt.vehicle_registration}</span>
                                         </div>
                                     )}
                                     {receipt.vehicle_model && (
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Model:</span>
+                                            <span className="text-muted-foreground">{t('receipts.model')}:</span>
                                             <span>{receipt.vehicle_model}</span>
                                         </div>
                                     )}
@@ -209,20 +211,20 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         {/* Payment Information */}
                         {(receipt.payment_method || receipt.payment_reference) && (
                             <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
-                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <CreditCard className="h-5 w-5" />
-                                    Payment Information
-                                </h3>
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <CreditCard className="h-5 w-5" />
+                                {t('receipts.paymentInformation')}
+                            </h3>
                                 <div className="grid gap-3">
                                     {receipt.payment_method && (
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Payment Method:</span>
+                                            <span className="text-muted-foreground">{t('receipts.paymentMethod')}:</span>
                                             <span>{receipt.payment_method}</span>
                                         </div>
                                     )}
                                     {receipt.payment_reference && (
                                         <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Reference:</span>
+                                            <span className="text-muted-foreground">{t('receipts.reference')}:</span>
                                             <span className="font-mono">{receipt.payment_reference}</span>
                                         </div>
                                     )}
@@ -237,36 +239,36 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
                             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Zap className="h-5 w-5" />
-                                Charging Details
+                                {t('receipts.chargingDetails')}
                             </h3>
                             <div className="grid gap-3">
                                 {receipt.charger_type && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Charger Type:</span>
+                                        <span className="text-muted-foreground">{t('receipts.chargerType')}:</span>
                                         <span>{receipt.charger_type}</span>
                                     </div>
                                 )}
                                 {receipt.rate_per_kwh && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Rate per kWh:</span>
+                                        <span className="text-muted-foreground">{t('receipts.ratePerKwh')}:</span>
                                         <span className="font-mono">{receipt.currency} {Number(receipt.rate_per_kwh).toFixed(4)}</span>
                                     </div>
                                 )}
                                 {receipt.kwh_consumed && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Energy Consumed:</span>
+                                        <span className="text-muted-foreground">{t('receipts.energyConsumed')}:</span>
                                         <span className="font-medium">{Number(receipt.kwh_consumed).toFixed(3)} kWh</span>
                                     </div>
                                 )}
                                 {receipt.charging_duration_minutes && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Charging Duration:</span>
+                                        <span className="text-muted-foreground">{t('receipts.chargingDuration')}:</span>
                                         <span>{formatDuration(receipt.charging_duration_minutes)}</span>
                                     </div>
                                 )}
                                 {receipt.tax_rate_percentage && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Tax Rate:</span>
+                                        <span className="text-muted-foreground">{t('receipts.taxRate')}:</span>
                                         <span>{Number(receipt.tax_rate_percentage).toFixed(2)}%</span>
                                     </div>
                                 )}
@@ -275,21 +277,21 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
 
                         {/* Amount Breakdown */}
                         <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
-                            <h3 className="text-lg font-semibold mb-4">Amount Breakdown</h3>
+                            <h3 className="text-lg font-semibold mb-4">{t('receipts.amountBreakdown')}</h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Subtotal:</span>
+                                    <span className="text-muted-foreground">{t('receipts.subtotal')}:</span>
                                     <span className="font-mono">{receipt.currency} {Number(receipt.amount).toFixed(2)}</span>
                                 </div>
                                 {receipt.tax_amount > 0 && (
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Tax:</span>
+                                        <span className="text-muted-foreground">{t('receipts.tax')}:</span>
                                         <span className="font-mono">{receipt.currency} {Number(receipt.tax_amount).toFixed(2)}</span>
                                     </div>
                                 )}
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between text-lg font-semibold">
-                                        <span>Total:</span>
+                                        <span>{t('receipts.total')}:</span>
                                         <span className="font-mono">{receipt.currency} {Number(receipt.total_amount).toFixed(2)}</span>
                                     </div>
                                 </div>
@@ -300,7 +302,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         {(receipt.description || receipt.notes) && (
                             <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
                                 <h3 className="text-lg font-semibold mb-4">
-                                    {receipt.description ? 'Description' : 'Notes'}
+                                    {receipt.description ? t('receipts.description') : t('receipts.notes')}
                                 </h3>
                                 <p className="text-muted-foreground">
                                     {receipt.description || receipt.notes}
@@ -312,7 +314,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
 
                 {/* Business Information */}
                 <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
-                    <h3 className="text-lg font-semibold mb-4">From</h3>
+                    <h3 className="text-lg font-semibold mb-4">{t('receipts.from')}</h3>
                     <div className="grid gap-2">
                         <p className="font-medium">{receipt.business_name || 'EV Charging Station'}</p>
                         {receipt.business_address && (
@@ -320,14 +322,14 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                         )}
                         <div className="flex gap-4 text-sm text-muted-foreground">
                             {receipt.business_number && (
-                                <span>Business Number: {receipt.business_number}</span>
+                                <span>{t('receipts.businessNumber')}: {receipt.business_number}</span>
                             )}
                             {receipt.business_vat && (
-                                <span>VAT: {receipt.business_vat}</span>
+                                <span>{t('receipts.vat')}: {receipt.business_vat}</span>
                             )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-2">
-                            Generated by Admin
+                            {t('receipts.generatedByAdmin')}
                         </p>
                     </div>
                 </div>

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AdminReceipt;
 use App\Models\User;
-use App\Models\UserReceipt;
+use App\Models\BusinessInfo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -92,17 +92,32 @@ class ReceiptController extends Controller
     {
         try {
             $users = User::select('id', 'name', 'surname', 'email')->get();
+            
+            \Log::info('Admin receipt create page accessed', [
+                'users_count' => $users->count()
+            ]);
 
-            \Log::info('Admin receipt create page accessed', ['users_count' => $users->count()]);
+            // Fetch business information
+            $businessInfo = auth()->user()->businessInfo()->orderBy('is_default', 'desc')->get();
 
             return Inertia::render('admin/receipts/create', [
                 'users' => $users,
+                // services removed
+                'businessInfo' => $businessInfo,
+                'businessInfoMissing' => $businessInfo->isEmpty(),
+                'businessCreateUrl' => route('admin.business.create'),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error loading receipt create page: ' . $e->getMessage());
-            
-            return redirect()->route('admin.receipts.index')
-                ->with('error', 'Unable to load create page. Please try again.');
+
+            return Inertia::render('admin/receipts/create', [
+                'users' => collect([]),
+                // services removed
+                'businessInfo' => collect([]),
+                'businessInfoMissing' => true,
+                'businessCreateUrl' => route('admin.business.create'),
+                'error' => 'Unable to load create page. Please try again.',
+            ]);
         }
     }
 
@@ -119,7 +134,7 @@ class ReceiptController extends Controller
 
             $validated = $request->validate([
                 'user_id' => 'required|exists:users,id',
-                'type' => 'required|in:receipt,invoice',
+                'type' => 'required|in:receipt',
                 // Business Information
                 'business_name' => 'nullable|string|max:255',
                 'business_number' => 'nullable|string|max:255',
@@ -191,9 +206,7 @@ class ReceiptController extends Controller
             // Create admin receipt
             $adminReceipt = AdminReceipt::create($validated);
             
-            // Create user receipt with same data
-            $userReceiptData = $validated;
-            $userReceipt = UserReceipt::create($userReceiptData);
+            // No separate user_receipts table anymore
 
             \Log::info('Receipts created successfully', [
                 'admin_receipt_id' => $adminReceipt->id, 
@@ -201,14 +214,12 @@ class ReceiptController extends Controller
                 'receipt_number' => $adminReceipt->receipt_number
             ]);
 
-            // Generate PDFs if not draft
+            // Generate PDF if not draft
             if ($adminReceipt->status !== 'draft') {
                 try {
                     $adminReceipt->generatePdf();
-                    $userReceipt->generatePdf();
-                    \Log::info('PDFs generated', [
-                        'admin_receipt_id' => $adminReceipt->id,
-                        'user_receipt_id' => $userReceipt->id
+                    \Log::info('PDF generated', [
+                        'admin_receipt_id' => $adminReceipt->id
                     ]);
                 } catch (\Exception $pdfError) {
                     \Log::error('PDF generation failed', ['error' => $pdfError->getMessage()]);
@@ -268,7 +279,7 @@ class ReceiptController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'type' => 'required|in:receipt,invoice',
+            'type' => 'required|in:receipt',
             // Business Information
             'business_name' => 'nullable|string|max:255',
             'business_number' => 'nullable|string|max:255',

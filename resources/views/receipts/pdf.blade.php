@@ -195,6 +195,30 @@
         </div>
     @endif
 
+    {{-- Items --}}
+    @if(isset($receipt->receipt_items) && count($receipt->receipt_items) > 0)
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="text-right">Quantity</th>
+                    <th class="text-right">Unit Price</th>
+                    <th class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($receipt->receipt_items as $item)
+                    <tr>
+                        <td>{{ $item['name'] }}</td>
+                        <td class="text-right">{{ number_format($item['quantity'], 0) }}</td>
+                        <td class="text-right">{{ $receipt->currency }} {{ number_format($item['unit_price'], 2) }}</td>
+                        <td class="text-right">{{ $receipt->currency }} {{ number_format($item['total_price'], 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
     @if($receipt->rate_per_kwh && $receipt->kwh_consumed)
         <table class="items-table">
             <thead>

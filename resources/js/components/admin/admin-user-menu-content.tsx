@@ -2,6 +2,7 @@ import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSep
 import { logout } from '@/routes/admin';
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface AdminUserMenuContentProps {
     admin: {
@@ -11,6 +12,8 @@ interface AdminUserMenuContentProps {
 }
 
 export function AdminUserMenuContent({ admin }: AdminUserMenuContentProps) {
+    const { t } = useTranslation();
+    
     const handleLogout = () => {
         router.post(logout().url);
     };
@@ -30,14 +33,14 @@ export function AdminUserMenuContent({ admin }: AdminUserMenuContentProps) {
                 <DropdownMenuItem asChild>
                     <Link href="/admin/settings" className="flex cursor-pointer items-center">
                         <Settings className="mr-2 h-4 w-4" />
-                        <span>Settings</span>
+                        <span>{t('navigation.settings')}</span>
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>{t('navigation.logout')}</span>
             </DropdownMenuItem>
         </>
     );

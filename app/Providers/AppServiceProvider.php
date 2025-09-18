@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +20,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register custom user provider
+        Auth::provider('custom', function ($app, $config) {
+            return new DualUserProvider();
+        });
+
         // Configure admin guard to redirect to admin login
         \Illuminate\Auth\Middleware\Authenticate::redirectUsing(function () {
             if (request()->is('admin/*')) {

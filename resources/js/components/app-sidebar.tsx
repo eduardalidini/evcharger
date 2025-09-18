@@ -6,21 +6,9 @@ import { dashboard } from '@/routes';
 import { index as receiptsIndex } from '@/routes/receipts';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Receipt } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Receipt, Zap } from 'lucide-react';
 import AppLogo from './app-logo';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'My Receipts',
-        href: receiptsIndex(),
-        icon: Receipt,
-    },
-];
+import { useTranslation } from 'react-i18next';
 
 const footerNavItems: NavItem[] = [
     {
@@ -36,6 +24,25 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { t } = useTranslation();
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: t('navigation.dashboard'),
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: t('navigation.receipts'),
+            href: receiptsIndex(),
+            icon: Receipt,
+        },
+        {
+            title: 'EV Charging',
+            href: '/user/charging',
+            icon: Zap,
+        },
+    ];
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

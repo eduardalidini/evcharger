@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UserReceipt;
+use App\Models\AdminReceipt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -18,18 +18,18 @@ class DashboardController extends Controller
         $userId = Auth::id();
         
         $stats = [
-            'total_receipts' => UserReceipt::where('user_id', $userId)->notDeleted()->count(),
-            'monthly_revenue' => UserReceipt::where('user_id', $userId)
+            'total_receipts' => AdminReceipt::where('user_id', $userId)->notDeleted()->count(),
+            'monthly_revenue' => AdminReceipt::where('user_id', $userId)
                 ->notDeleted()
                 ->where('status', 'paid')
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->sum('total_amount'),
-            'pending_receipts' => UserReceipt::where('user_id', $userId)
+            'pending_receipts' => AdminReceipt::where('user_id', $userId)
                 ->notDeleted()
                 ->whereIn('status', ['sent', 'overdue'])
                 ->count(),
-            'recent_receipts' => UserReceipt::where('user_id', $userId)
+            'recent_receipts' => AdminReceipt::where('user_id', $userId)
                 ->notDeleted()
                 ->with(['admin:id,email'])
                 ->latest()

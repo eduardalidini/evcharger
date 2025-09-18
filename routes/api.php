@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Admin\AdminAuthController;
 use App\Http\Controllers\Api\Admin\UserApiController;
+use App\Http\Controllers\OCPPController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,3 +41,6 @@ Route::prefix('admin')->group(function () {
         });
     });
 });
+
+// OCPP WebSocket endpoints
+Route::post('/ocpp/{chargePointId}', [OCPPController::class, 'handleMessage']);

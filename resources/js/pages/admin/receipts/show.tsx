@@ -3,7 +3,7 @@ import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
-import { Download, ArrowLeft, Calendar, CreditCard, Zap, Car, Trash2, Receipt } from 'lucide-react';
+import { Download, ArrowLeft, Calendar, CreditCard, Zap, Car, Trash2, Receipt, Package } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 interface User {
@@ -19,12 +19,22 @@ interface Admin {
     email: string;
 }
 
+interface ReceiptItem {
+    id: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+}
+
+// services removed
+
 interface Receipt {
     id: number;
     receipt_number: string;
     user: User;
     admin: Admin;
-    type: 'receipt' | 'invoice';
+    type: 'receipt';
     // Business Information
     business_name: string;
     business_number: string | null;
@@ -52,6 +62,8 @@ interface Receipt {
     due_date: string | null;
     pdf_path: string | null;
     notes: string | null;
+    // Items only
+    receipt_items?: ReceiptItem[];
     created_at: string;
 }
 
@@ -69,7 +81,6 @@ const statusColors = {
 
 const typeColors = {
     receipt: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-    invoice: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
 };
 
 export default function ReceiptShow({ receipt }: ReceiptShowProps) {
@@ -79,7 +90,7 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
             href: dashboard().url,
         },
         {
-            title: 'Receipts & Invoices',
+            title: 'Receipts',
             href: '/admin/receipts',
         },
         {
@@ -245,6 +256,39 @@ export default function ReceiptShow({ receipt }: ReceiptShowProps) {
                                         <div>
                                             <label className="text-sm font-medium text-muted-foreground">Rate per kWh</label>
                                             <p className="text-sm font-mono">{receipt.currency} {Number(receipt.rate_per_kwh).toFixed(4)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Items */}
+                        {(receipt.receipt_items && receipt.receipt_items.length > 0) && (
+                            <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border p-6">
+                                <h3 className="text-lg font-semibold mb-4">Items</h3>
+                                <div className="space-y-6">
+                                    {/* Items */}
+                                    {receipt.receipt_items && receipt.receipt_items.length > 0 && (
+                                        <div>
+                                            <h4 className="font-medium mb-3 flex items-center gap-2">
+                                                <Package className="h-4 w-4" />
+                                                Items
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {receipt.receipt_items.map((item, index) => (
+                                                    <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-sm">{item.name}</div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {receipt.currency} {item.unit_price.toFixed(2)} × {item.quantity}
+                                                            </div>
+                                                        </div>
+                                                        <div className="font-medium text-sm">
+                                                            {receipt.currency} {item.total_price.toFixed(2)}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                 </div>

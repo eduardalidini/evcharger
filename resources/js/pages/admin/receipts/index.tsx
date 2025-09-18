@@ -7,6 +7,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
 import { Plus, Search, Trash2, Download, Eye } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface User {
     id: number;
@@ -21,12 +22,22 @@ interface Admin {
     email: string;
 }
 
+interface ReceiptItem {
+    id: number;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+}
+
+// services removed
+
 interface Receipt {
     id: number;
     receipt_number: string;
     user: User;
     admin: Admin;
-    type: 'receipt' | 'invoice';
+    type: 'receipt';
     // Business Information
     business_name: string;
     business_number: string | null;
@@ -53,6 +64,8 @@ interface Receipt {
     issued_at: string | null;
     due_date: string | null;
     pdf_path: string | null;
+    // Items only
+    receipt_items?: ReceiptItem[];
     created_at: string;
 }
 
@@ -77,13 +90,13 @@ interface ReceiptsIndexProps {
     };
 }
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
     {
-        title: 'Admin Dashboard',
+        title: t('receipts.breadcrumb.adminDashboard'),
         href: dashboard().url,
     },
     {
-        title: 'Receipts & Invoices',
+        title: t('admin.navigation.receipts'),
         href: '/admin/receipts',
     },
 ];
@@ -98,10 +111,10 @@ const statusColors = {
 
 const typeColors = {
     receipt: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
-    invoice: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
 };
 
 export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsIndexProps) {
+    const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState(search || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
@@ -142,16 +155,16 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
     };
 
     return (
-        <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Receipts & Invoices Management" />
+        <AdminLayout breadcrumbs={getBreadcrumbs(t)}>
+            <Head title="Receipts Management" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold">Receipts & Invoices</h1>
+                    <h1 className="text-2xl font-bold">{t('admin.navigation.receipts')}</h1>
                     <Link href="/admin/receipts/create">
                         <Button className="flex items-center gap-2">
                             <Plus className="h-4 w-4" />
-                            Create New
+                            {t('receipts.create')}
                         </Button>
                     </Link>
                 </div>
@@ -161,7 +174,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by receipt number, description, or user..."
+                            placeholder={t('table.search')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
@@ -169,28 +182,27 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                     </div>
                     <Select value={typeFilter || "all"} onValueChange={(value) => setTypeFilter(value === "all" ? "" : value)}>
                         <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Type" />
+                            <SelectValue placeholder={t('receipts.type')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="receipt">Receipt</SelectItem>
-                            <SelectItem value="invoice">Invoice</SelectItem>
+                            <SelectItem value="all">{t('receipts.allTypes')}</SelectItem>
+                            <SelectItem value="receipt">{t('receipts.receipt')}</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}>
                         <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Status" />
+                            <SelectValue placeholder={t('receipts.status')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="overdue">Overdue</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="all">{t('receipts.allStatus')}</SelectItem>
+                            <SelectItem value="draft">{t('receipts.draft')}</SelectItem>
+                            <SelectItem value="sent">{t('receipts.sent')}</SelectItem>
+                            <SelectItem value="paid">{t('receipts.paid')}</SelectItem>
+                            <SelectItem value="overdue">{t('receipts.overdue')}</SelectItem>
+                            <SelectItem value="cancelled">{t('receipts.cancelled')}</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button type="submit">Search</Button>
+                    <Button type="submit">{t('common.search')}</Button>
                 </form>
 
                 {/* Receipts Table */}
@@ -199,15 +211,15 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                         <table className="w-full">
                             <thead className="bg-muted/50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left font-medium">Number</th>
-                                    <th className="px-4 py-3 text-left font-medium">Type</th>
-                                    <th className="px-4 py-3 text-left font-medium">User</th>
-                                    <th className="px-4 py-3 text-left font-medium">Vehicle</th>
-                                    <th className="px-4 py-3 text-left font-medium">kWh</th>
-                                    <th className="px-4 py-3 text-left font-medium">Amount</th>
-                                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                                    <th className="px-4 py-3 text-left font-medium">Issued</th>
-                                    <th className="px-4 py-3 text-left font-medium">Actions</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.number')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.type')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.user')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.vehicle')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.kwh')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.amount')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.status')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('receipts.issued')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('common.actions')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,7 +235,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                                             <td className="px-4 py-3 font-mono">{receipt.receipt_number}</td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs capitalize ${typeColors[receipt.type]}`}>
-                                                    {receipt.type}
+                                                    {t(`receipts.${receipt.type}`)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
@@ -251,7 +263,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded-full text-xs capitalize ${statusColors[receipt.status]}`}>
-                                                    {receipt.status}
+                                                    {t(`receipts.${receipt.status}`)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
@@ -260,7 +272,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-1">
                                                     <Link href={`/admin/receipts/${receipt.id}`}>
-                                                        <Button variant="outline" size="sm" title="View">
+                                                        <Button variant="outline" size="sm" title={t('common.view')}>
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
@@ -268,7 +280,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                                                         variant="outline" 
                                                         size="sm"
                                                         onClick={() => downloadPdf(receipt.id)}
-                                                        title="Download PDF"
+                                                        title={t('receipts.downloadPdf')}
                                                     >
                                                         <Download className="h-4 w-4" />
                                                     </Button>
@@ -277,7 +289,7 @@ export default function ReceiptsIndex({ receipts, search, filters }: ReceiptsInd
                                                         size="sm"
                                                         onClick={() => deleteReceipt(receipt.id)}
                                                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                        title="Delete"
+                                                        title={t('common.delete')}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>

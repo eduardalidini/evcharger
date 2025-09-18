@@ -1,5 +1,6 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 import DeleteAdmin from '@/components/admin/delete-admin';
 import HeadingSmall from '@/components/heading-small';
@@ -11,23 +12,24 @@ import AdminLayout from '@/layouts/admin/admin-layout';
 import AdminSettingsLayout from '@/layouts/admin/admin-settings-layout';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Profile settings',
-        href: '/admin/settings/profile',
-    },
-];
-
 export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
     const { admin } = usePage<SharedData>().props;
+    const { t } = useTranslation();
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: t('settings.profile.title'),
+            href: '/admin/settings/profile',
+        },
+    ];
 
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
-            <Head title="Profile settings" />
+            <Head title={t('settings.profile.title')} />
 
             <AdminSettingsLayout>
                 <div className="space-y-6">
-                    <HeadingSmall title="Profile information" description="Update your name and email address" />
+                    <HeadingSmall title={t('settings.profile.informationTitle')} description={t('settings.profile.informationDescription')} />
 
                     <Form
                         method="patch"
@@ -40,7 +42,7 @@ export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEm
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label htmlFor="email">{t('settings.profile.emailAddress')}</Label>
 
                                     <Input
                                         id="email"
@@ -50,7 +52,7 @@ export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEm
                                         name="email"
                                         required
                                         autoComplete="username"
-                                        placeholder="Email address"
+                                        placeholder={t('settings.profile.emailAddressPlaceholder')}
                                     />
 
                                     <InputError className="mt-2" message={errors.email} />
@@ -59,27 +61,27 @@ export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEm
                                 {mustVerifyEmail && admin.email_verified_at === null && (
                                     <div>
                                         <p className="mt-2 text-sm text-gray-800 dark:text-gray-200">
-                                            Your email address is unverified.
+                                            {t('settings.profile.emailUnverified')}
                                             <Link
                                                 href="/admin/email/verification-notification"
                                                 method="post"
                                                 as="button"
                                                 className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
                                             >
-                                                Click here to re-send the verification email.
+                                                {t('settings.profile.resendVerification')}
                                             </Link>
                                         </p>
 
                                         {status === 'verification-link-sent' && (
                                             <div className="mt-2 text-sm font-medium text-green-600 dark:text-green-400">
-                                                A new verification link has been sent to your email address.
+                                                {t('settings.profile.verificationSent')}
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 <div className="flex items-center gap-4">
-                                    <Button disabled={processing}>Save</Button>
+                                    <Button disabled={processing}>{t('settings.profile.save')}</Button>
 
                                     <Transition
                                         show={recentlySuccessful}
@@ -88,7 +90,7 @@ export default function AdminProfile({ mustVerifyEmail, status }: { mustVerifyEm
                                         leave="transition ease-in-out"
                                         leaveTo="opacity-0"
                                     >
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">Saved.</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">{t('settings.profile.saved')}</p>
                                     </Transition>
                                 </div>
                             </>

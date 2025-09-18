@@ -1,4 +1,5 @@
 import InputError from '@/components/input-error';
+import LanguageSelector from '@/components/language-selector';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -8,12 +9,14 @@ import { Head, useForm } from '@inertiajs/react';
 import { store as loginStore } from '@/routes/admin/login';
 import { LoaderCircle } from 'lucide-react';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AdminLoginProps {
     status?: string;
 }
 
 export default function AdminLogin({ status }: AdminLoginProps) {
+    const { t } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -70,13 +73,17 @@ export default function AdminLogin({ status }: AdminLoginProps) {
     };
 
     return (
-        <AdminAuthLayout title="Admin Login" description="Enter your admin credentials to access the dashboard">
-            <Head title="Admin Login" />
+        <AdminAuthLayout title={t('auth.adminLogin.title')} description={t('auth.adminLogin.description')}>
+            <Head title={t('auth.adminLogin.title')} />
+
+            <div className="flex justify-end mb-4">
+                <LanguageSelector variant="outline" size="sm" />
+            </div>
 
             <form onSubmit={submit} className="flex flex-col gap-6">
                 <div className="grid gap-6">
                     <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
+                        <Label htmlFor="email">{t('auth.login.email')}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -86,13 +93,13 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                             autoFocus
                             tabIndex={1}
                             autoComplete="email"
-                            placeholder="admin@example.com"
+                            placeholder={t('auth.adminLogin.emailPlaceholder')}
                         />
                         <InputError message={errors.email} />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t('auth.login.password')}</Label>
                         <Input
                             id="password"
                             type="password"
@@ -101,7 +108,7 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                             required
                             tabIndex={2}
                             autoComplete="current-password"
-                            placeholder="Password"
+                            placeholder={t('auth.login.passwordPlaceholder')}
                         />
                         <InputError message={errors.password} />
                     </div>
@@ -113,12 +120,12 @@ export default function AdminLogin({ status }: AdminLoginProps) {
                             onCheckedChange={(checked) => handleRememberChange(checked as boolean)}
                             tabIndex={3} 
                         />
-                        <Label htmlFor="remember">Remember me</Label>
+                        <Label htmlFor="remember">{t('auth.login.rememberMe')}</Label>
                     </div>
 
                     <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Admin Login
+                        {t('auth.adminLogin.loginButton')}
                     </Button>
                 </div>
             </form>
