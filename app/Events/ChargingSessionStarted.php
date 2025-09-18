@@ -43,17 +43,25 @@ class ChargingSessionStarted implements ShouldBroadcastNow
     {
         $user = $this->session->user();
         
+        \Log::info('Broadcasting ChargingSessionStarted event', [
+            'session_id' => $this->session->id,
+            'user_id' => $this->session->user_id,
+            'charge_point_id' => $this->session->charge_point_id
+        ]);
+        
         return [
             'session' => [
                 'id' => $this->session->id,
                 'user_id' => $this->session->user_id,
                 'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
                 'service_name' => $this->session->chargingService->name,
+                'charge_point_id' => $this->session->charge_point_id,
                 'charge_point_name' => $this->session->chargePoint->name,
                 'connector_id' => $this->session->connector_id,
                 'status' => $this->session->status,
-                'started_at' => $this->session->started_at,
+                'started_at' => $this->session->started_at->toISOString(),
                 'credits_reserved' => $this->session->credits_reserved,
+                'rate_per_kwh' => $this->session->chargingService->rate_per_kwh,
             ]
         ];
     }

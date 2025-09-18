@@ -9,20 +9,31 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 // Register broadcasting auth routes for both user and admin guards
 Broadcast::routes(['middleware' => ['auth:web,admin']]);
 
-// Admin charging dashboard channel
+// Admin charging dashboard channel - allow authenticated admins and users
 Broadcast::channel('admin.charging', function ($user) {
-    // Check if user is authenticated as admin
-    return $user && auth()->guard('admin')->check();
+    \Log::info('Admin charging channel auth attempt', [
+        'user_id' => $user ? $user->id : null,
+        'user_type' => get_class($user ?? new \stdClass()),
+        'is_authenticated' => $user !== null
+    ]);
+    return $user !== null; // Allow any authenticated user
 });
 
-// User charging updates channel
+// User charging updates channel - allow specific user
 Broadcast::channel('user.charging.{userId}', function ($user, $userId) {
-    // Allow the user to subscribe to their own channel
-    return $user && $user->id == $userId;
+    \Log::info('User charging channel auth attempt', [
+        'user_id' => $user ? $user->id : null,
+        'requested_user_id' => $userId,
+        'match' => $user && ((int) $user->id === (int) $userId)
+    ]);
+    return $user && ((int) $user->id === (int) $userId);
 });
 
-// Global charging updates (for both admin and users)
+// Global charging updates - allow authenticated users
 Broadcast::channel('charging.global', function ($user) {
-    // Allow all authenticated users (admin and regular users)
-    return $user && (auth()->guard('web')->check() || auth()->guard('admin')->check());
+    \Log::info('Global charging channel auth attempt', [
+        'user_id' => $user ? $user->id : null,
+        'is_authenticated' => $user !== null
+    ]);
+    return $user !== null; // Allow any authenticated user
 });

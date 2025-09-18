@@ -46,6 +46,7 @@ class ChargingSessionStopped implements ShouldBroadcastNow
                 'user_id' => $this->session->user_id,
                 'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
                 'service_name' => $this->session->chargingService->name,
+                'charge_point_id' => $this->session->charge_point_id,
                 'charge_point_name' => $this->session->chargePoint->name,
                 'status' => $this->session->status,
                 'stopped_at' => $this->session->stopped_at,
@@ -56,9 +57,14 @@ class ChargingSessionStopped implements ShouldBroadcastNow
             'transaction' => [
                 'id' => $this->transaction->id,
                 'transaction_reference' => $this->transaction->transaction_reference,
+                'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                'service_name' => $this->session->chargingService->name,
+                'charge_point_name' => $this->session->chargePoint->name,
                 'total_amount' => $this->transaction->total_amount,
                 'energy_consumed' => $this->transaction->energy_consumed,
                 'duration_minutes' => $this->transaction->duration_minutes,
+                'session_started_at' => $this->session->started_at,
+                'created_at' => $this->transaction->created_at,
             ]
         ];
     }

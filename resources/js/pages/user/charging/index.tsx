@@ -76,91 +76,170 @@ export default function ChargingIndex({
     const [sessionTimer, setSessionTimer] = useState(0);
     const [estimatedCost, setEstimatedCost] = useState(0);
     const [liveChargePoints, setLiveChargePoints] = useState<ChargePoint[]>(chargePoints);
+    const [liveActiveSession, setLiveActiveSession] = useState<ActiveSession | null>(activeSession);
+    const [liveRecentTransactions, setLiveRecentTransactions] = useState<RecentTransaction[]>(recentTransactions);
 
     // WebSocket listeners for real-time updates
     useEffect(() => {
-        let wsConnected = false;
-        let interval: NodeJS.Timeout;
-        
-        // Try WebSocket first for user-specific updates
-        if (window.Echo && user) {
-            try {
-                const channel = window.Echo.private(`user.charging.${user.id}`);
+        if (!window.Echo || !user) {
+            console.error('❌ Echo not available or user not found - WebSocket connection required');
+            return;
+        }
+
+        try {
+            console.log('🔗 Setting up WebSocket for user:', user.id);
+            
+            // Wait for connection to be established
+            const setupChannels = () => {
+                const userChannel = window.Echo.private(`user.charging.${user.id}`);
+                const globalChannel = window.Echo.private('charging.global');
                 
-                channel.listen('.session.started', (event: any) => {
-                    console.log('User session started:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions'] });
+                // Debug channel subscription
+                userChannel.subscribed(() => {
+                    console.log('✅ Successfully subscribed to user channel:', `user.charging.${user.id}`);
                 });
                 
-                channel.listen('.session.stopped', (event: any) => {
-                    console.log('User session stopped:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions', 'user'] });
+                userChannel.error((error: any) => {
+                    console.error('❌ User channel subscription error:', error);
                 });
                 
-                channel.listen('.session.updated', (event: any) => {
-                    console.log('User session updated:', event);
-                    router.reload({ only: ['activeSession'] });
+                globalChannel.subscribed(() => {
+                    console.log('✅ Successfully subscribed to global channel');
                 });
                 
-                // Listen for charge point status updates
-                window.Echo.private('charging.global').listen('.charge_point.status_updated', (event: any) => {
-                    console.log('Charge point status updated:', event);
+                globalChannel.error((error: any) => {
+                    console.error('❌ Global channel subscription error:', error);
+                });
+                
+                return { userChannel, globalChannel };
+            };
+            
+            const { userChannel, globalChannel } = setupChannels();
+                
+            userChannel.listen('.session.started', (event: any) => {
+                console.log('🚀 USER: Session started event received:', event);
+                const session = event.session;
+                
+                // Update active session
+                setLiveActiveSession({
+                    id: session.id,
+                    service_name: session.service_name,
+                    charge_point_name: session.charge_point_name,
+                    status: session.status,
+                    started_at: session.started_at,
+                    energy_consumed: 0,
+                    credits_used: 0,
+                    credits_reserved: session.credits_reserved || 0,
+                    rate_per_kwh: session.rate_per_kwh || 0
+                });
+                
+                // Update charge points
+                setLiveChargePoints(prev => prev.map(cp => 
+                    Number(cp.id) === Number(session.charge_point_id)
+                        ? { ...cp, status: 'Occupied' }
+                        : cp
+                ));
+            });
+                
+            userChannel.listen('.session.stopped', (event: any) => {
+                console.log('🛑 USER: Session stopped event received:', event);
+                const session = event.session;
+                const transaction = event.transaction;
+                
+                // Clear active session
+                setLiveActiveSession(null);
+                
+                // Update charge points
+                setLiveChargePoints(prev => prev.map(cp => 
+                    Number(cp.id) === Number(session.charge_point_id)
+                        ? { ...cp, status: 'Available' }
+                        : cp
+                ));
+                
+                // Add to recent transactions
+                if (transaction) {
+                    setLiveRecentTransactions(prev => [
+                        {
+                            id: transaction.id,
+                            reference: transaction.transaction_reference,
+                            service_name: transaction.service_name,
+                            charge_point_name: transaction.charge_point_name,
+                            energy_consumed: transaction.energy_consumed,
+                            total_amount: transaction.total_amount,
+                            duration_minutes: transaction.duration_minutes,
+                            created_at: transaction.created_at
+                        },
+                        ...prev.slice(0, 9)
+                    ]);
+                }
+                
+                // Reload user balance
+                router.reload({ only: ['user'] });
+            });
+                
+            userChannel.listen('.session.updated', (event: any) => {
+                console.log('🔄 USER: Session updated event received:', event);
+                const session = event.session;
+                
+                setLiveActiveSession(prev => prev ? {
+                    ...prev,
+                    status: session.status,
+                    energy_consumed: session.energy_consumed || prev.energy_consumed,
+                    credits_used: session.credits_used || prev.credits_used
+                } : null);
+            });
+                
+                // Listen for charge point status updates on global channel
+                globalChannel.listen('.charge_point.status_updated', (event: any) => {
+                    console.log('🔋 Charge point status updated in user panel:', event);
                     const updatedChargePoint = event.charge_point;
+                    console.log('🔋 CP ID:', updatedChargePoint?.id, 'Status:', updatedChargePoint?.status);
                     
                     // Update the local charge points state
-                    setLiveChargePoints(prev => 
-                        prev.map(cp => 
-                            cp.id === updatedChargePoint.id 
-                                ? { ...cp, status: updatedChargePoint.status }
+                    setLiveChargePoints(prev => {
+                        const updated = prev.map(cp => 
+                            Number(cp.id) === Number(updatedChargePoint.id) 
+                                ? { ...cp, status: updatedChargePoint.status as string }
                                 : cp
-                        )
-                    );
+                        );
+                        console.log('🔋 Updated charge points:', updated);
+                        return updated;
+                    });
                 });
                 
-                wsConnected = true;
-                console.log('WebSocket connected for user charging');
-            } catch (error) {
-                console.warn('WebSocket failed, falling back to polling:', error);
-            }
-        }
-        
-        // Fallback polling for active sessions
-        if (!wsConnected || activeSession) {
-            interval = setInterval(() => {
-                router.reload({ only: ['activeSession', 'user', 'recentTransactions'] });
-            }, 2000);
+            console.log('✅ WebSocket connected for user charging');
+        } catch (error) {
+            console.error('❌ WebSocket connection failed:', error);
         }
 
         return () => {
             if (window.Echo && user) {
                 window.Echo.leaveChannel(`user.charging.${user.id}`);
-            }
-            if (interval) {
-                clearInterval(interval);
+                window.Echo.leaveChannel('charging.global');
             }
         };
     }, [user?.id]);
 
     // Real-time session timer updates
     useEffect(() => {
-        if (!activeSession) return;
+        if (!liveActiveSession) return;
 
         const interval = setInterval(() => {
             // Calculate session duration
-            const startTime = new Date(activeSession.started_at).getTime();
+            const startTime = new Date(liveActiveSession.started_at).getTime();
             const now = new Date().getTime();
             const durationMinutes = Math.floor((now - startTime) / (1000 * 60));
             setSessionTimer(durationMinutes);
 
             // Simulate energy consumption and cost
             const simulatedConsumption = (durationMinutes / 60) * 10; // 10 kWh per hour
-            const cost = simulatedConsumption * safeNumber(activeSession.rate_per_kwh);
+            const cost = simulatedConsumption * safeNumber(liveActiveSession.rate_per_kwh);
             setEstimatedCost(cost);
 
             // Check if credits are running out and auto-stop
-            if (cost >= safeNumber(user.balance) && activeSession.status === 'Active') {
+            if (cost >= safeNumber(user.balance) && liveActiveSession.status === 'Active') {
                 console.log('Credits exhausted, stopping session automatically...');
-                router.post(`/user/charging/session/${activeSession.id}/stop`, {}, {
+                router.post(`/user/charging/session/${liveActiveSession.id}/stop`, {}, {
                     preserveScroll: true,
                 });
                 return;
@@ -168,12 +247,14 @@ export default function ChargingIndex({
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [activeSession]);
+    }, [liveActiveSession]);
 
-    // Update live charge points when props change
+    // Update live state when props change
     useEffect(() => {
         setLiveChargePoints(chargePoints);
-    }, [chargePoints]);
+        setLiveActiveSession(activeSession);
+        setLiveRecentTransactions(recentTransactions);
+    }, [chargePoints, activeSession, recentTransactions]);
 
     const startSession = () => {
         if (!selectedServiceId || !selectedChargePointId) {
@@ -201,15 +282,15 @@ export default function ChargingIndex({
     };
 
     const pauseSession = () => {
-        if (!activeSession) return;
+        if (!liveActiveSession) return;
         setProcessing(true);
-        router.post(`/user/charging/session/${activeSession.id}/pause`, {}, {
+        router.post(`/user/charging/session/${liveActiveSession.id}/pause`, {}, {
             onFinish: () => setProcessing(false),
         });
     };
 
     const resumeSession = () => {
-        if (!activeSession) return;
+        if (!liveActiveSession) return;
         
         if (safeNumber(user.balance) < 5) {
             alert('Insufficient credits to resume session');
@@ -217,15 +298,15 @@ export default function ChargingIndex({
         }
         
         setProcessing(true);
-        router.post(`/user/charging/session/${activeSession.id}/resume`, {}, {
+        router.post(`/user/charging/session/${liveActiveSession.id}/resume`, {}, {
             onFinish: () => setProcessing(false),
         });
     };
 
     const stopSession = () => {
-        if (!activeSession) return;
+        if (!liveActiveSession) return;
         setProcessing(true);
-        router.post(`/user/charging/session/${activeSession.id}/stop`, {}, {
+        router.post(`/user/charging/session/${liveActiveSession.id}/stop`, {}, {
             onFinish: () => setProcessing(false),
         });
     };
@@ -298,14 +379,14 @@ export default function ChargingIndex({
                 </Card>
 
                 {/* Active Session */}
-                {activeSession && (
+                {liveActiveSession && (
                     <Card className="mb-6 border-green-200 bg-green-50">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Activity className={`h-5 w-5 ${getStatusColor(activeSession.status)}`} />
+                                <Activity className={`h-5 w-5 ${getStatusColor(liveActiveSession.status)}`} />
                                 Active Charging Session
-                                <Badge className={getStatusColor(activeSession.status)}>
-                                    {activeSession.status}
+                                <Badge className={getStatusColor(liveActiveSession.status)}>
+                                    {liveActiveSession.status}
                                 </Badge>
                             </CardTitle>
                         </CardHeader>
@@ -313,11 +394,11 @@ export default function ChargingIndex({
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                                 <div>
                                     <div className="text-sm text-gray-600">Service</div>
-                                    <div className="font-medium">{activeSession.service_name}</div>
+                                    <div className="font-medium">{liveActiveSession.service_name}</div>
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-600">Charge Point</div>
-                                    <div className="font-medium">{activeSession.charge_point_name}</div>
+                                    <div className="font-medium">{liveActiveSession.charge_point_name}</div>
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-600">Duration</div>
@@ -342,20 +423,20 @@ export default function ChargingIndex({
                                         {estimatedCost.toFixed(2)} ALL
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                        Rate: {safeNumber(activeSession.rate_per_kwh)} ALL/kWh
+                                        Rate: {safeNumber(liveActiveSession.rate_per_kwh)} ALL/kWh
                                     </div>
                                 </div>
                                 <div className="bg-white p-4 rounded-lg">
                                     <div className="text-sm text-gray-600">Session Started</div>
                                     <div className="font-medium">
-                                        {new Date(activeSession.started_at).toLocaleString()}
+                                        {new Date(liveActiveSession.started_at).toLocaleString()}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Session Controls */}
                             <div className="flex gap-3">
-                                {activeSession.status === 'Active' && (
+                                {liveActiveSession.status === 'Active' && (
                                     <Button 
                                         onClick={pauseSession} 
                                         disabled={processing}
@@ -365,7 +446,7 @@ export default function ChargingIndex({
                                         Pause
                                     </Button>
                                 )}
-                                {activeSession.status === 'Paused' && (
+                                {liveActiveSession.status === 'Paused' && (
                                     <Button 
                                         onClick={resumeSession} 
                                         disabled={processing || safeNumber(user.balance) < 5}
@@ -399,7 +480,7 @@ export default function ChargingIndex({
                 )}
 
                 {/* Start New Session */}
-                {!activeSession && (
+                {!liveActiveSession && (
                     <Card className="mb-6">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -508,11 +589,11 @@ export default function ChargingIndex({
                         <CardTitle>Recent Transactions</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {recentTransactions.length === 0 ? (
+                        {liveRecentTransactions.length === 0 ? (
                             <p className="text-gray-500">No transactions yet</p>
                         ) : (
                             <div className="space-y-3">
-                                {recentTransactions.map((transaction) => (
+                                {liveRecentTransactions.map((transaction) => (
                                     <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                         <div>
                                             <div className="font-medium">{transaction.service_name}</div>

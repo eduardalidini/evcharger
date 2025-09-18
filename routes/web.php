@@ -48,3 +48,4 @@ require __DIR__.'/admin.php';
 Route::middleware(['auth', 'verified'])->prefix('user')->name('user.')->group(function () {
     require __DIR__.'/user.php';
 });
+

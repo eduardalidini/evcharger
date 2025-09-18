@@ -92,7 +92,10 @@ export default function ServicesIndex({
     const [liveActiveSessions, setLiveActiveSessions] = useState<ActiveSession[]>(activeSessions);
     const [liveRecentTransactions, setLiveRecentTransactions] = useState<RecentTransaction[]>(recentTransactions);
     const [liveStats, setLiveStats] = useState(stats);
-    const [liveChargePoints, setLiveChargePoints] = useState<ChargePoint[]>(chargePoints);
+    const [liveChargePoints, setLiveChargePoints] = useState<ChargePoint[]>(() => {
+        console.log('Initial chargePoints:', chargePoints);
+        return chargePoints;
+    });
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -122,6 +125,7 @@ export default function ServicesIndex({
                 setSelectedUserId('');
                 setSelectedServiceId('');
                 setSelectedChargePointId('');
+                // WebSocket events will handle real-time updates
             },
             onFinish: () => setProcessing(false),
             preserveScroll: true,
@@ -130,78 +134,154 @@ export default function ServicesIndex({
 
     // WebSocket listeners for real-time updates
     useEffect(() => {
-        // Try to establish WebSocket connection, fallback to polling
-        let wsConnected = false;
-        let interval: NodeJS.Timeout;
-        
-        // Try WebSocket first
-        if (window.Echo) {
-            try {
-                const channel = window.Echo.private('admin.charging');
+        if (!window.Echo) {
+            console.error('❌ Echo not available - WebSocket connection required');
+            return;
+        }
+
+        try {
+            console.log('🔗 Setting up WebSocket connection for admin charging...');
+            const channel = window.Echo.private('admin.charging');
+            
+            // Debug channel subscription
+            channel.subscribed(() => {
+                console.log('✅ Successfully subscribed to admin charging channel');
+            });
+            
+            channel.error((error: any) => {
+                console.error('❌ Admin channel subscription error:', error);
+            });
                 
-                channel.listen('.session.started', (event: any) => {
-                    console.log('Session started:', event);
-                    router.reload({ only: ['activeSessions', 'stats'] });
+            channel.listen('.session.started', (event: any) => {
+                console.log('🚀 ADMIN: Session started event received:', event);
+                const session = event.session;
+                    
+                    // Update charge point status immediately
+                    setLiveChargePoints(prev => {
+                        const updated = prev.map(cp => {
+                            return Number(cp.id) === Number(session?.charge_point_id)
+                                ? { ...cp, status: 'Occupied' }
+                                : cp;
+                        });
+                        console.log('🚀 ADMIN: Charge points after session started:', updated);
+                        return updated;
+                    });
+                    
+                    // Add to active sessions
+                    setLiveActiveSessions(prev => [...prev, {
+                        id: session.id,
+                        user_name: session.user_name,
+                        user_id: session.user_id,
+                        service_name: session.service_name,
+                        charge_point_name: session.charge_point_name,
+                        connector_id: session.connector_id,
+                        status: session.status,
+                        started_at: session.started_at,
+                        duration_minutes: 0,
+                        energy_consumed: 0,
+                        credits_reserved: session.credits_reserved || 0,
+                        credits_used: 0
+                    }]);
+                    
+                    // Update stats
+                    setLiveStats(prev => ({
+                        ...prev,
+                        active_sessions: prev.active_sessions + 1,
+                        available_charge_points: prev.available_charge_points - 1
+                    }));
                 });
                 
                 channel.listen('.session.stopped', (event: any) => {
-                    console.log('Session stopped:', event);
-                    router.reload({ only: ['activeSessions', 'recentTransactions', 'stats'] });
+                    console.log('🛑 ADMIN: Session stopped:', event);
+                    const session = event.session;
+                    
+                    // Update charge point status immediately
+                    setLiveChargePoints(prev => {
+                        const updated = prev.map(cp => 
+                            Number(cp.id) === Number(session?.charge_point_id)
+                                ? { ...cp, status: 'Available' }
+                                : cp
+                        );
+                        console.log('🛑 ADMIN: Charge points after session stopped:', updated);
+                        return updated;
+                    });
+                    
+                    // Remove from active sessions
+                    setLiveActiveSessions(prev => prev.filter(s => s.id !== session.id));
+                    
+                    // Add to recent transactions if transaction data is available
+                    if (event.transaction) {
+                        setLiveRecentTransactions(prev => [event.transaction, ...prev.slice(0, 9)]);
+                    }
+                    
+                    // Update stats
+                    setLiveStats(prev => ({
+                        ...prev,
+                        active_sessions: Math.max(0, prev.active_sessions - 1),
+                        available_charge_points: prev.available_charge_points + 1
+                    }));
                 });
                 
                 channel.listen('.session.updated', (event: any) => {
                     console.log('Session updated:', event);
-                    router.reload({ only: ['activeSessions'] });
+                    const session = event.session;
+                    
+                    // Update the specific session in active sessions
+                    setLiveActiveSessions(prev => 
+                        prev.map(s => 
+                            s.id === session.id 
+                                ? {
+                                    ...s,
+                                    status: session.status,
+                                    duration_minutes: session.duration_minutes || s.duration_minutes,
+                                    energy_consumed: session.energy_consumed || s.energy_consumed,
+                                    credits_used: session.credits_used || s.credits_used
+                                }
+                                : s
+                        )
+                    );
                 });
                 
                 channel.listen('.charge_point.status_updated', (event: any) => {
-                    console.log('Charge point status updated:', event);
+                    console.log('🔋 ADMIN: Charge point status updated:', event);
                     const updatedChargePoint = event.charge_point;
+                    console.log('🔋 ADMIN: CP ID:', updatedChargePoint?.id, 'Status:', updatedChargePoint?.status);
                     
                     // Update the local charge points state
-                    setLiveChargePoints(prev => 
-                        prev.map(cp => 
-                            cp.id === updatedChargePoint.id 
+                    setLiveChargePoints(prev => {
+                        const updated = prev.map(cp => {
+                            return Number(cp.id) === Number(updatedChargePoint.id)
                                 ? { ...cp, status: updatedChargePoint.status }
-                                : cp
-                        )
-                    );
-                    
-                    // Update stats based on new charge point status
-                    setLiveStats(prev => ({
-                        ...prev,
-                        available_charge_points: liveChargePoints.map(cp => 
-                            cp.id === updatedChargePoint.id ? updatedChargePoint : cp
-                        ).filter(cp => cp.status === 'Available').length
-                    }));
+                                : cp;
+                        });
+                        console.log('🔋 ADMIN: Updated charge points:', updated);
+                        
+                        // Update stats with the new charge points array
+                        setLiveStats(prevStats => ({
+                            ...prevStats,
+                            available_charge_points: updated.filter(cp => cp.status === 'Available').length
+                        }));
+                        
+                        return updated;
+                    });
                 });
                 
-                wsConnected = true;
-                console.log('WebSocket connected for admin charging');
-            } catch (error) {
-                console.warn('WebSocket failed, falling back to polling:', error);
-            }
-        }
-        
-        // Fallback to polling if WebSocket fails
-        if (!wsConnected) {
-            interval = setInterval(() => {
-                router.reload({ only: ['activeSessions', 'recentTransactions', 'stats'] });
-            }, 3000);
+            console.log('✅ WebSocket connected for admin charging');
+        } catch (error) {
+            console.error('❌ WebSocket connection failed:', error);
         }
 
         return () => {
             if (window.Echo) {
                 window.Echo.leaveChannel('admin.charging');
             }
-            if (interval) {
-                clearInterval(interval);
-            }
         };
     }, []);
 
     // Update local state when props change
     useEffect(() => {
+        console.log('Props changed - updating local state');
+        console.log('New chargePoints from props:', chargePoints);
         setLiveActiveSessions(activeSessions);
         setLiveRecentTransactions(recentTransactions);
         setLiveStats(stats);
