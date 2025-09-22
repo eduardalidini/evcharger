@@ -4,6 +4,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
+// Register broadcasting auth routes using both web and admin guards
+Broadcast::routes(['middleware' => ['web', 'auth:web,admin']]);
+
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
@@ -69,4 +72,10 @@ Broadcast::channel('charging.global', function ($user) {
     \Log::info('Global channel auth result', ['authenticated' => $isAuthenticated]);
     
     return $isAuthenticated;
+});
+
+// Test channel for WebSocket broadcasting - allow authenticated users
+Broadcast::channel('channel-messages', function ($user) {
+    // Allow if user is authenticated through either web or admin guard
+    return auth('web')->check() || auth('admin')->check();
 });

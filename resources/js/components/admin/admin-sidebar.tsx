@@ -7,10 +7,9 @@ import { index as receiptsIndex } from '@/routes/admin/receipts';
 import { index as businessIndex } from '@/routes/admin/business';
 import { index as currenciesIndex } from '@/routes/admin/currencies';
 import { index as productsIndex } from '@/routes/admin/products';
-import { index as servicesIndex } from '@/routes/admin/services';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Receipt, Building2, IndianRupee, Package, Settings, Wrench, Zap } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Receipt, Building2, IndianRupee, Package, Settings, Wrench } from 'lucide-react';
 import AppLogo from '../app-logo';
 import { AdminNavMain } from './admin-nav-main';
 import { useTranslation } from 'react-i18next';
@@ -46,11 +45,6 @@ export function AdminSidebar() {
             title: t('admin.navigation.receipts'),
             href: receiptsIndex(),
             icon: Receipt,
-        },
-        {
-            title: 'Services',
-            href: servicesIndex(),
-            icon: Zap,
         },
         {
             title: t('admin.navigation.products'),

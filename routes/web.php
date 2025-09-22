@@ -21,6 +21,8 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+// Use Broadcast::routes in routes/channels.php; do not override here
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     

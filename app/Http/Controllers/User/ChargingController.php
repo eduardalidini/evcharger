@@ -7,10 +7,6 @@ use App\Models\ChargingService;
 use App\Models\ChargePoint;
 use App\Models\ChargingSession;
 use App\Models\ChargingTransaction;
-use App\Events\ChargingSessionStarted;
-use App\Events\ChargingSessionStopped;
-use App\Events\ChargingSessionUpdated;
-use App\Events\ChargePointStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -131,11 +127,7 @@ class ChargingController extends Controller
             // Update charge point status
             $chargePoint->update(['status' => 'Occupied']);
             
-            // Broadcast session started event
-            ChargingSessionStarted::dispatch($session->load(['chargingService', 'chargePoint']));
-            
-            // Broadcast charge point status update
-            ChargePointStatusUpdated::dispatch($chargePoint->fresh());
+            // Broadcasting removed
         });
         
         return redirect()->route('user.charging.index')->with('success', 'Charging session started successfully');
@@ -158,7 +150,7 @@ class ChargingController extends Controller
             'last_activity' => now(),
         ]);
         
-        ChargingSessionUpdated::dispatch($session->fresh()->load(['chargingService', 'chargePoint']));
+        // Broadcasting removed
         
         return back()->with('success', 'Session paused');
     }
@@ -185,7 +177,7 @@ class ChargingController extends Controller
             'last_activity' => now(),
         ]);
         
-        ChargingSessionUpdated::dispatch($session->fresh()->load(['chargingService', 'chargePoint']));
+        // Broadcasting removed
         
         return back()->with('success', 'Session resumed');
     }
@@ -244,14 +236,7 @@ class ChargingController extends Controller
             // Update charge point status
             $session->chargePoint->update(['status' => 'Available']);
             
-            // Broadcast session stopped event
-            ChargingSessionStopped::dispatch(
-                $session->fresh()->load(['chargingService', 'chargePoint']),
-                $transaction
-            );
-            
-            // Broadcast charge point status update
-            ChargePointStatusUpdated::dispatch($session->chargePoint->fresh());
+            // Broadcasting removed
         });
         
         return redirect()->route('user.charging.index')->with('success', 'Session stopped. Credits have been deducted from your balance.');

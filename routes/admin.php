@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\BusinessController;
 use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\Settings\AdminProfileController;
 use App\Http\Controllers\Admin\Settings\AdminPasswordController;
 use App\Http\Middleware\ShareAdminData;
@@ -32,10 +31,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('users', UserManagementController::class);
         Route::resource('receipts', ReceiptController::class);
         
-        // Services management
-        Route::resource('services', ServiceController::class);
-        Route::post('services/simulation/start', [ServiceController::class, 'startSimulation'])->name('services.simulation.start');
-        Route::post('services/simulation/{session}/stop', [ServiceController::class, 'stopSimulation'])->name('services.simulation.stop');
+        // Services removed
         
         // Products management
         Route::resource('products', ProductController::class);
