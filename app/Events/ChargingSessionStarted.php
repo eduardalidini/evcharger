@@ -26,7 +26,8 @@ class ChargingSessionStarted implements ShouldBroadcastNow
     {
         \Log::info('ChargingSessionStarted broadcasting to channels', [
             'session_id' => $this->session->id,
-            'user_id' => $this->session->user_id
+            'user_id' => $this->session->user_id,
+            'charge_point_id' => $this->session->charge_point_id
         ]);
         
         return [

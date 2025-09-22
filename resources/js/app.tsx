@@ -8,17 +8,18 @@ import './i18n';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
-// Setup Laravel Echo for WebSocket broadcasting
+// Setup Laravel Echo for WebSocket broadcasting with Reverb
 window.Pusher = Pusher;
 
+// Configure Echo for Reverb
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY || 'app_key',
     wsHost: import.meta.env.VITE_REVERB_HOST || 'localhost',
     wsPort: import.meta.env.VITE_REVERB_PORT || 8080,
     wssPort: import.meta.env.VITE_REVERB_PORT || 8080,
-    forceTLS: false,
-    enabledTransports: ['ws'],
+    forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'http') === 'https',
+    enabledTransports: ['ws', 'wss'],
     disableStats: true,
     authEndpoint: '/broadcasting/auth',
     auth: {
@@ -26,73 +27,79 @@ window.Echo = new Echo({
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         },
     },
-    authorizer: (channel: any, options: any) => {
-        return {
-            authorize: (socketId: string, callback: Function) => {
-                fetch('/broadcasting/auth', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({
-                        socket_id: socketId,
-                        channel_name: channel.name,
-                    }),
-                })
-                .then((response) => {
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    throw new Error('Authentication failed');
-                })
-                .then((data) => {
-                    callback(null, data);
-                })
-                .catch((error) => {
-                    console.error('Echo authentication error:', error);
-                    callback(error, null);
+    withCredentials: true,
+});
+
+console.log('🔗 Echo configured for Reverb:', window.Echo);
+
+// Monitor connection status - Reverb compatible approach
+function setupReverbConnection() {
+    try {
+        // For Reverb, we need to access the connection differently
+        const connector = window.Echo.connector;
+        
+        if (connector && connector.socket) {
+            console.log('🔄 Setting up Reverb WebSocket connection monitoring...');
+            
+            // Listen for connection events on the socket
+            connector.socket.on('connect', () => {
+                console.log('✅ WebSocket connected to Reverb');
+                console.log('🔗 Connection details:', {
+                    host: import.meta.env.VITE_REVERB_HOST || 'localhost',
+                    port: import.meta.env.VITE_REVERB_PORT || 8080,
+                    key: import.meta.env.VITE_REVERB_APP_KEY || 'app_key'
                 });
-            },
-        };
-    },
-});
+            });
 
-console.log('🔗 Echo configured:', window.Echo);
+            connector.socket.on('disconnect', () => {
+                console.log('❌ WebSocket disconnected from Reverb');
+            });
 
-// Monitor connection status
-window.Echo.connector.pusher.connection.bind('connected', () => {
-    console.log('✅ WebSocket connected to Reverb');
-});
+            connector.socket.on('connect_error', (error: any) => {
+                console.error('❌ WebSocket connection error:', error);
+            });
 
-window.Echo.connector.pusher.connection.bind('disconnected', () => {
-    console.log('❌ WebSocket disconnected from Reverb');
-});
+            // Monitor for auth errors
+            connector.socket.on('error', (error: any) => {
+                console.error('❌ WebSocket error:', error);
+                if (error.code === 403) {
+                    console.error('❌ Authentication/Authorization failed');
+                }
+            });
 
-window.Echo.connector.pusher.connection.bind('error', (error: any) => {
-    console.error('❌ WebSocket connection error:', error);
-});
+        } else if (connector && connector.pusher) {
+            // Fallback for Pusher-like API if available
+            console.log('🔄 Using Pusher-compatible connection monitoring...');
+            
+            connector.pusher.connection.bind('connected', () => {
+                console.log('✅ WebSocket connected to Reverb');
+            });
 
-// Monitor auth errors
-window.Echo.connector.pusher.connection.bind('subscription_error', (error: any) => {
-    console.error('❌ WebSocket subscription error:', error);
-});
+            connector.pusher.connection.bind('disconnected', () => {
+                console.log('❌ WebSocket disconnected from Reverb');
+            });
 
-window.Echo.connector.pusher.connection.bind('auth_error', (error: any) => {
-    console.error('❌ WebSocket authentication error:', error);
-});
+            connector.pusher.connection.bind('error', (error: any) => {
+                console.error('❌ WebSocket error:', error);
+            });
+        } else {
+            console.log('⚠️ Echo connector not ready, will retry in 1 second...');
+            setTimeout(setupReverbConnection, 1000);
+        }
+    } catch (error) {
+        console.error('❌ Error setting up Reverb connection monitoring:', error);
+        // Retry after delay
+        setTimeout(setupReverbConnection, 1000);
+    }
+}
 
-// Add global error handler for debugging
-window.Echo.connector.pusher.bind('pusher:error', (error: any) => {
-    console.error('❌ Pusher error:', error);
-});
+// Initialize connection monitoring
+setupReverbConnection();
 
-console.log('🔗 WebSocket debugging enabled - check console for auth errors');
+console.log('🔗 Reverb WebSocket debugging enabled');
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
