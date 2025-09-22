@@ -18,6 +18,8 @@
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
         "predis/predis": "^3.2",
+        "ratchet/pawl": "^0.4.3",
+        "react/socket": "^1.16",
         "tightenco/ziggy": "^2.6"
     },
     "require-dev": {

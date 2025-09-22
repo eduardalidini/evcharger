@@ -37,6 +37,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('services/simulation/start', [ServiceController::class, 'startSimulation'])->name('services.simulation.start');
         Route::post('services/simulation/{session}/stop', [ServiceController::class, 'stopSimulation'])->name('services.simulation.stop');
         
+        // Real-time admin actions
+        Route::post('services/{service}/toggle-status', [ServiceController::class, 'toggleServiceStatus'])->name('services.toggle-status');
+        Route::post('sessions/{session}/force-stop', [ServiceController::class, 'forceStopSession'])->name('sessions.force-stop');
+        Route::post('charge-points/{chargePoint}/manage', [ServiceController::class, 'manageChargePoint'])->name('charge-points.manage');
+        
         // Products management
         Route::resource('products', ProductController::class);
         

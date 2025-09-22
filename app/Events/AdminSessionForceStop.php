@@ -11,13 +11,14 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ChargingSessionUpdated implements ShouldBroadcastNow
+class AdminSessionForceStop implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
         public ChargingSession $session,
-        public array $meterValues = []
+        public int $adminId,
+        public string $reason = 'Administrative action'
     ) {}
 
     /**
@@ -26,9 +27,9 @@ class ChargingSessionUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('admin.charging'),
-            new PrivateChannel('user.charging.' . $this->session->user_id),
-            new PrivateChannel('charging.global'),
+            new PrivateChannel('user.charging.' . $this->session->user_id), // Specific user
+            new PrivateChannel('admin.charging'), // Admin panel
+            new PrivateChannel('charging.global'), // Global updates
         ];
     }
 
@@ -46,26 +47,12 @@ class ChargingSessionUpdated implements ShouldBroadcastNow
                 'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
                 'service_name' => $this->session->chargingService->name,
                 'charge_point_name' => $this->session->chargePoint->name,
-                'connector_id' => $this->session->connector_id,
                 'status' => $this->session->status,
                 'started_at' => $this->session->started_at,
-                'energy_consumed' => (float) $this->session->energy_consumed,
-                'credits_reserved' => (float) $this->session->credits_reserved,
-                'credits_used' => (float) $this->session->credits_used,
-                'duration_minutes' => $this->session->getDurationInMinutes(),
-                'last_activity' => $this->session->last_activity,
             ],
-            'meter_values' => $this->meterValues,
-            'charge_point' => [
-                'id' => $this->session->chargePoint->id,
-                'identifier' => $this->session->chargePoint->identifier,
-                'name' => $this->session->chargePoint->name,
-                'location' => $this->session->chargePoint->location,
-                'status' => $this->session->chargePoint->status,
-                'connector_count' => $this->session->chargePoint->connector_count,
-                'max_power' => (float) $this->session->chargePoint->max_power,
-                'is_simulation' => $this->session->chargePoint->is_simulation,
-            ]
+            'admin_id' => $this->adminId,
+            'reason' => $this->reason,
+            'timestamp' => now()->toISOString(),
         ];
     }
 
@@ -74,6 +61,6 @@ class ChargingSessionUpdated implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'session.updated';
+        return 'session.force_stopped';
     }
 }

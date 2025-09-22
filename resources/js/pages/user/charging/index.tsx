@@ -42,6 +42,8 @@ interface ActiveSession {
     credits_used: number | string;
     credits_reserved: number | string;
     rate_per_kwh: number | string;
+    duration_minutes?: number;
+    last_activity?: string;
 }
 
 interface RecentTransaction {
@@ -80,30 +82,129 @@ export default function ChargingIndex({
     // WebSocket listeners for real-time updates
     useEffect(() => {
         let wsConnected = false;
-        let interval: NodeJS.Timeout;
+        let interval: NodeJS.Timeout | undefined;
         
         // Try WebSocket first for user-specific updates
         if (window.Echo && user) {
             try {
+                console.log(`🔌 Attempting to connect to user.charging.${user.id} channel...`);
                 const channel = window.Echo.private(`user.charging.${user.id}`);
+                
+                // Test connection
+                channel.subscribed(() => {
+                    console.log(`✅ WebSocket connected to user.charging.${user.id} channel`);
+                    wsConnected = true;
+                });
+                
+                channel.error((error: any) => {
+                    console.error('❌ WebSocket connection error:', error);
+                    wsConnected = false;
+                });
+
+                // Add connection status logging
+                window.Echo.connector.socket.on('connect', () => {
+                    console.log('🟢 Reverb WebSocket connected');
+                });
+
+                window.Echo.connector.socket.on('disconnect', () => {
+                    console.log('🔴 Reverb WebSocket disconnected');
+                    wsConnected = false;
+                });
+
+                window.Echo.connector.socket.on('reconnect', () => {
+                    console.log('🔄 Reverb WebSocket reconnected');
+                    wsConnected = true;
+                });
+
+                window.Echo.connector.socket.on('error', (error: any) => {
+                    console.error('🚨 Reverb WebSocket error:', error);
+                    wsConnected = false;
+                });
                 
                 channel.listen('.session.started', (event: any) => {
                     console.log('User session started:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions'] });
+                    router.reload({ only: ['activeSession', 'recentTransactions', 'chargePoints'] });
                 });
                 
                 channel.listen('.session.stopped', (event: any) => {
                     console.log('User session stopped:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions', 'user'] });
+                    router.reload({ only: ['activeSession', 'recentTransactions', 'user', 'chargePoints'] });
                 });
                 
                 channel.listen('.session.updated', (event: any) => {
                     console.log('User session updated:', event);
-                    router.reload({ only: ['activeSession'] });
+                    
+                    // Update local state instead of reloading the page
+                    if (event.session && activeSession && event.session.id === activeSession.id) {
+                        // Update the session data in real time
+                        const updatedSession = {
+                            ...activeSession,
+                            ...event.session,
+                            // Update timing in real-time
+                            duration_minutes: event.session.duration_minutes || activeSession.duration_minutes,
+                            energy_consumed: event.session.energy_consumed || activeSession.energy_consumed,
+                            credits_used: event.session.credits_used || activeSession.credits_used,
+                            last_activity: event.session.last_activity || activeSession.last_activity,
+                        };
+                        
+                        // Trigger a minimal reload to update just the active session
+                        router.reload({ only: ['activeSession'] });
+                    }
+                });
+
+                // Listen for admin force stop events
+                channel.listen('.session.force_stopped', (event: any) => {
+                    console.log('Admin force stopped session:', event);
+                    router.reload({ only: ['activeSession', 'recentTransactions', 'user', 'chargePoints'] });
+                    
+                    // Show notification to user
+                    if (event.reason) {
+                        alert(`Your charging session was stopped by admin: ${event.reason}`);
+                    }
+                });
+                
+                // Listen for global updates (admin actions)
+                const globalChannel = window.Echo.private('charging.global');
+                
+                // Listen for service updates from admin
+                globalChannel.listen('.service.updated', (event: any) => {
+                    console.log('Service updated by admin:', event);
+                    router.reload({ only: ['services'] });
+                    
+                    // Show notification for service changes
+                    if (event.action === 'deactivated') {
+                        alert(`Service "${event.service.name}" has been deactivated`);
+                    } else if (event.action === 'activated') {
+                        console.log(`Service "${event.service.name}" is now available`);
+                    }
+                });
+                
+                // Listen for charge point management from admin
+                globalChannel.listen('.charge_point.managed', (event: any) => {
+                    console.log('Charge point managed by admin:', event);
+                    const updatedChargePoint = event.charge_point;
+                    
+                    setLiveChargePoints(prev => 
+                        prev.map(cp => 
+                            cp.id === updatedChargePoint.id 
+                                ? { ...cp, status: updatedChargePoint.status }
+                                : cp
+                        )
+                    );
+                    
+                    // Reload charge points from server
+                    router.reload({ only: ['chargePoints'] });
+                    
+                    // Show notification for maintenance/disable actions
+                    if (event.action === 'maintenance') {
+                        alert(`Charge point "${event.charge_point.name}" is under maintenance`);
+                    } else if (event.action === 'disable') {
+                        alert(`Charge point "${event.charge_point.name}" has been disabled`);
+                    }
                 });
                 
                 // Listen for charge point status updates
-                window.Echo.private('charging.global').listen('.charge_point.status_updated', (event: any) => {
+                globalChannel.listen('.charge_point.status_updated', (event: any) => {
                     console.log('Charge point status updated:', event);
                     const updatedChargePoint = event.charge_point;
                     
@@ -115,21 +216,28 @@ export default function ChargingIndex({
                                 : cp
                         )
                     );
+                    
+                    // Also reload charge points from server to ensure consistency
+                    router.reload({ only: ['chargePoints'] });
                 });
                 
-                wsConnected = true;
-                console.log('WebSocket connected for user charging');
+                console.log('WebSocket listeners registered for user charging');
             } catch (error) {
                 console.warn('WebSocket failed, falling back to polling:', error);
+                wsConnected = false;
             }
         }
         
-        // Fallback polling for active sessions
-        if (!wsConnected || activeSession) {
-            interval = setInterval(() => {
-                router.reload({ only: ['activeSession', 'user', 'recentTransactions'] });
-            }, 2000);
-        }
+        // POLLING DISABLED - WebSocket only
+        // Setup polling with delayed start to allow WebSocket to connect
+        // setTimeout(() => {
+        //     if (!wsConnected || activeSession) {
+        //         console.log('Starting polling for user panel...');
+        //         interval = setInterval(() => {
+        //             router.reload({ only: ['activeSession', 'user', 'recentTransactions', 'chargePoints'] });
+        //         }, 8000); // Reduced from 2 seconds to 8 seconds
+        //     }
+        // }, 2000); // Wait 2 seconds for WebSocket to connect
 
         return () => {
             if (window.Echo && user) {

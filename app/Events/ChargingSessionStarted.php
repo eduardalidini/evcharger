@@ -53,7 +53,20 @@ class ChargingSessionStarted implements ShouldBroadcastNow
                 'connector_id' => $this->session->connector_id,
                 'status' => $this->session->status,
                 'started_at' => $this->session->started_at,
-                'credits_reserved' => $this->session->credits_reserved,
+                'duration_minutes' => $this->session->getDurationInMinutes(),
+                'energy_consumed' => (float) $this->session->energy_consumed,
+                'credits_reserved' => (float) $this->session->credits_reserved,
+                'credits_used' => (float) $this->session->credits_used,
+            ],
+            'charge_point' => [
+                'id' => $this->session->chargePoint->id,
+                'identifier' => $this->session->chargePoint->identifier,
+                'name' => $this->session->chargePoint->name,
+                'location' => $this->session->chargePoint->location,
+                'status' => $this->session->chargePoint->status,
+                'connector_count' => $this->session->chargePoint->connector_count,
+                'max_power' => (float) $this->session->chargePoint->max_power,
+                'is_simulation' => $this->session->chargePoint->is_simulation,
             ]
         ];
     }

@@ -11,6 +11,9 @@ use App\Events\ChargingSessionStarted;
 use App\Events\ChargingSessionStopped;
 use App\Events\ChargingSessionUpdated;
 use App\Events\ChargePointStatusUpdated;
+use App\Events\AdminChargingServiceUpdated;
+use App\Events\AdminChargePointManaged;
+use App\Events\AdminSessionForceStop;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -119,7 +122,10 @@ class ServiceController extends Controller
             'sort_order' => 'integer|min:0',
         ]);
 
-        ChargingService::create($validated);
+        $service = ChargingService::create($validated);
+
+        // Broadcast admin service creation event
+        AdminChargingServiceUpdated::dispatch($service, 'created', auth('admin')->id());
 
         return redirect()->route('admin.services.index')
                         ->with('success', 'Charging service created successfully.');
@@ -156,6 +162,16 @@ class ServiceController extends Controller
     }
 
     /**
+     * Show the form for editing the specified service.
+     */
+    public function edit(ChargingService $service): Response
+    {
+        return Inertia::render('admin/services/edit', [
+            'service' => $service,
+        ]);
+    }
+
+    /**
      * Update the specified service.
      */
     public function update(Request $request, ChargingService $service)
@@ -170,6 +186,9 @@ class ServiceController extends Controller
         ]);
 
         $service->update($validated);
+
+        // Broadcast admin service update event
+        AdminChargingServiceUpdated::dispatch($service, 'updated', auth('admin')->id());
 
         return redirect()->route('admin.services.index')
                         ->with('success', 'Charging service updated successfully.');
@@ -186,6 +205,9 @@ class ServiceController extends Controller
                             ->withErrors(['error' => 'Cannot delete service with active charging sessions.']);
         }
 
+        // Broadcast admin service deletion event before deletion
+        AdminChargingServiceUpdated::dispatch($service, 'deleted', auth('admin')->id());
+        
         $service->delete();
 
         return redirect()->route('admin.services.index')
@@ -237,6 +259,136 @@ class ServiceController extends Controller
         return response()->json([
             'success' => true,
             'session' => $session
+        ]);
+    }
+
+    /**
+     * Force stop a charging session (admin action)
+     */
+    public function forceStopSession(Request $request, ChargingSession $session)
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+        ]);
+
+        if (!in_array($session->status, ['Starting', 'Active', 'Paused'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session is not active'
+            ], 400);
+        }
+
+        // Force stop the session
+        $session->update([
+            'status' => 'Completed',
+            'stopped_at' => now(),
+            'credits_used' => $session->credits_reserved, // Use all reserved credits
+        ]);
+
+        // Create transaction
+        $transaction = ChargingTransaction::create([
+            'charging_session_id' => $session->id,
+            'user_id' => $session->user_id,
+            'charging_service_id' => $session->charging_service_id,
+            'charge_point_id' => $session->charge_point_id,
+            'transaction_reference' => 'ADM-' . strtoupper(uniqid()),
+            'energy_consumed' => $session->energy_consumed,
+            'total_amount' => $session->credits_used,
+            'duration_minutes' => $session->getDurationInMinutes(),
+            'session_started_at' => $session->started_at,
+        ]);
+
+        // Update charge point status
+        $session->chargePoint->update(['status' => 'Available']);
+
+        // Broadcast events
+        AdminSessionForceStop::dispatch($session, auth('admin')->id(), $validated['reason']);
+        ChargingSessionStopped::dispatch($session, $transaction);
+        ChargePointStatusUpdated::dispatch($session->chargePoint);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Session force stopped successfully'
+        ]);
+    }
+
+    /**
+     * Manage charge point status (admin action)
+     */
+    public function manageChargePoint(Request $request, ChargePoint $chargePoint)
+    {
+        $validated = $request->validate([
+            'action' => 'required|in:enable,disable,maintenance,reset',
+            'message' => 'nullable|string|max:255',
+        ]);
+
+        $statusMap = [
+            'enable' => 'Available',
+            'disable' => 'Unavailable',
+            'maintenance' => 'Faulted',
+            'reset' => 'Available',
+        ];
+
+        $chargePoint->update([
+            'status' => $statusMap[$validated['action']]
+        ]);
+
+        // If disabling/maintenance, stop any active sessions
+        if (in_array($validated['action'], ['disable', 'maintenance'])) {
+            $activeSessions = $chargePoint->chargingSessions()->active()->get();
+            
+            foreach ($activeSessions as $session) {
+                $session->update([
+                    'status' => 'Completed',
+                    'stopped_at' => now(),
+                    'credits_used' => $session->credits_reserved,
+                ]);
+
+                $transaction = ChargingTransaction::create([
+                    'charging_session_id' => $session->id,
+                    'user_id' => $session->user_id,
+                    'charging_service_id' => $session->charging_service_id,
+                    'charge_point_id' => $session->charge_point_id,
+                    'transaction_reference' => 'ADM-' . strtoupper(uniqid()),
+                    'energy_consumed' => $session->energy_consumed,
+                    'total_amount' => $session->credits_used,
+                    'duration_minutes' => $session->getDurationInMinutes(),
+                    'session_started_at' => $session->started_at,
+                ]);
+
+                AdminSessionForceStop::dispatch($session, auth('admin')->id(), 'Charge point maintenance');
+                ChargingSessionStopped::dispatch($session, $transaction);
+            }
+        }
+
+        // Broadcast charge point management event
+        AdminChargePointManaged::dispatch(
+            $chargePoint, 
+            $validated['action'], 
+            auth('admin')->id(), 
+            $validated['message']
+        );
+        ChargePointStatusUpdated::dispatch($chargePoint);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Charge point {$validated['action']} successfully"
+        ]);
+    }
+
+    /**
+     * Toggle service active status (admin action)
+     */
+    public function toggleServiceStatus(ChargingService $service)
+    {
+        $service->update(['is_active' => !$service->is_active]);
+        
+        $action = $service->is_active ? 'activated' : 'deactivated';
+        AdminChargingServiceUpdated::dispatch($service, $action, auth('admin')->id());
+
+        return response()->json([
+            'success' => true,
+            'message' => "Service {$action} successfully"
         ]);
     }
 

@@ -132,30 +132,163 @@ export default function ServicesIndex({
     useEffect(() => {
         // Try to establish WebSocket connection, fallback to polling
         let wsConnected = false;
-        let interval: NodeJS.Timeout;
+        let interval: NodeJS.Timeout | undefined;
         
         // Try WebSocket first
         if (window.Echo) {
             try {
+                console.log('🔌 Attempting to connect to admin.charging channel...');
                 const channel = window.Echo.private('admin.charging');
                 
+                // Test connection
+                channel.subscribed(() => {
+                    console.log('✅ WebSocket connected to admin.charging channel');
+                    wsConnected = true;
+                });
+                
+                channel.error((error: any) => {
+                    console.error('❌ WebSocket connection error:', error);
+                    wsConnected = false;
+                });
+
+                // Add connection status logging
+                window.Echo.connector.socket.on('connect', () => {
+                    console.log('🟢 Reverb WebSocket connected');
+                });
+
+                window.Echo.connector.socket.on('disconnect', () => {
+                    console.log('🔴 Reverb WebSocket disconnected');
+                    wsConnected = false;
+                });
+
+                window.Echo.connector.socket.on('reconnect', () => {
+                    console.log('🔄 Reverb WebSocket reconnected');
+                    wsConnected = true;
+                });
+
+                window.Echo.connector.socket.on('error', (error: any) => {
+                    console.error('🚨 Reverb WebSocket error:', error);
+                    wsConnected = false;
+                });
+                
                 channel.listen('.session.started', (event: any) => {
-                    console.log('Session started:', event);
-                    router.reload({ only: ['activeSessions', 'stats'] });
+                    console.log('✅ Session started via WebSocket:', event);
+                    const newSession = event.session;
+                    
+                    // Add new session to live state
+                    setLiveActiveSessions(prev => [newSession, ...prev]);
+                    
+                    // Update stats
+                    setLiveStats(prev => ({
+                        ...prev,
+                        active_sessions: prev.active_sessions + 1
+                    }));
+                    
+                    // Update charge point status if provided
+                    if (event.charge_point) {
+                        setLiveChargePoints(prev => 
+                            prev.map(cp => 
+                                cp.id === event.charge_point.id 
+                                    ? { ...cp, status: event.charge_point.status }
+                                    : cp
+                            )
+                        );
+                    }
                 });
                 
                 channel.listen('.session.stopped', (event: any) => {
-                    console.log('Session stopped:', event);
-                    router.reload({ only: ['activeSessions', 'recentTransactions', 'stats'] });
+                    console.log('✅ Session stopped via WebSocket:', event);
+                    const stoppedSession = event.session;
+                    const transaction = event.transaction;
+                    
+                    // Remove session from active sessions
+                    setLiveActiveSessions(prev => 
+                        prev.filter(session => session.id !== stoppedSession.id)
+                    );
+                    
+                    // Add to recent transactions if provided
+                    if (transaction) {
+                        setLiveRecentTransactions(prev => [transaction, ...prev.slice(0, 9)]);
+                    }
+                    
+                    // Update stats
+                    setLiveStats(prev => ({
+                        ...prev,
+                        active_sessions: Math.max(0, prev.active_sessions - 1)
+                    }));
+                    
+                    // Update charge point status if provided
+                    if (event.charge_point) {
+                        setLiveChargePoints(prev => 
+                            prev.map(cp => 
+                                cp.id === event.charge_point.id 
+                                    ? { ...cp, status: event.charge_point.status }
+                                    : cp
+                            )
+                        );
+                    }
                 });
                 
                 channel.listen('.session.updated', (event: any) => {
-                    console.log('Session updated:', event);
-                    router.reload({ only: ['activeSessions'] });
+                    console.log('✅ Session updated via WebSocket:', event);
+                    const updatedSession = event.session;
+                    
+                    // Update session in live state
+                    setLiveActiveSessions(prev => 
+                        prev.map(session => 
+                            session.id === updatedSession.id 
+                                ? { ...session, ...updatedSession }
+                                : session
+                        )
+                    );
+                });
+
+                // Listen for admin force stop confirmations
+                channel.listen('.session.force_stopped', (event: any) => {
+                    console.log('✅ Session force stopped via WebSocket:', event);
+                    const stoppedSession = event.session;
+                    
+                    // Remove from active sessions
+                    setLiveActiveSessions(prev => 
+                        prev.filter(session => session.id !== stoppedSession.id)
+                    );
+                    
+                    // Update stats
+                    setLiveStats(prev => ({
+                        ...prev,
+                        active_sessions: Math.max(0, prev.active_sessions - 1)
+                    }));
+                });
+
+                // Listen for service updates (when admin makes changes)
+                channel.listen('.service.updated', (event: any) => {
+                    console.log('✅ Service updated via WebSocket:', event);
+                    // For services, we still reload as the data structure is complex
+                    router.reload({ only: ['services'] });
+                });
+
+                // Listen for charge point management confirmations
+                channel.listen('.charge_point.managed', (event: any) => {
+                    console.log('✅ Charge point managed via WebSocket:', event);
+                    const updatedChargePoint = event.charge_point;
+                    
+                    setLiveChargePoints(prev => 
+                        prev.map(cp => 
+                            cp.id === updatedChargePoint.id 
+                                ? { ...cp, status: updatedChargePoint.status }
+                                : cp
+                        )
+                    );
+                    
+                    // Update available charge points count
+                    setLiveStats(prev => ({
+                        ...prev,
+                        available_charge_points: liveChargePoints.filter(cp => cp.status === 'Available').length
+                    }));
                 });
                 
                 channel.listen('.charge_point.status_updated', (event: any) => {
-                    console.log('Charge point status updated:', event);
+                    console.log('✅ Charge point status updated via WebSocket:', event);
                     const updatedChargePoint = event.charge_point;
                     
                     // Update the local charge points state
@@ -167,28 +300,30 @@ export default function ServicesIndex({
                         )
                     );
                     
-                    // Update stats based on new charge point status
+                    // Update available charge points count
                     setLiveStats(prev => ({
                         ...prev,
-                        available_charge_points: liveChargePoints.map(cp => 
-                            cp.id === updatedChargePoint.id ? updatedChargePoint : cp
-                        ).filter(cp => cp.status === 'Available').length
+                        available_charge_points: liveChargePoints.filter(cp => cp.status === 'Available').length
                     }));
                 });
                 
-                wsConnected = true;
-                console.log('WebSocket connected for admin charging');
+                console.log('WebSocket listeners registered for admin charging');
             } catch (error) {
                 console.warn('WebSocket failed, falling back to polling:', error);
+                wsConnected = false;
             }
         }
         
-        // Fallback to polling if WebSocket fails
-        if (!wsConnected) {
-            interval = setInterval(() => {
-                router.reload({ only: ['activeSessions', 'recentTransactions', 'stats'] });
-            }, 3000);
-        }
+        // POLLING DISABLED - WebSocket only
+        // Setup polling with delayed start to allow WebSocket to connect
+        // setTimeout(() => {
+        //     if (!wsConnected) {
+        //         console.log('WebSocket not connected, starting polling...');
+        //         interval = setInterval(() => {
+        //             router.reload({ only: ['activeSessions', 'recentTransactions', 'stats', 'chargePoints'] });
+        //         }, 10000); // Reduced from 3 seconds to 10 seconds
+        //     }
+        // }, 2000); // Wait 2 seconds for WebSocket to connect
 
         return () => {
             if (window.Echo) {

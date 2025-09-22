@@ -331,7 +331,7 @@ export default function ShowUser({
                                                         <SelectContent>
                                                             {chargingServices.filter(s => s.is_active).map((service) => (
                                                                 <SelectItem key={service.id} value={service.id.toString()}>
-                                                                    {service.name} ({service.rate_per_kwh.toFixed(2)} {service.currency}/kWh)
+                                                                    {service.name} ({Number(service.rate_per_kwh).toFixed(2)} {service.currency}/kWh)
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -381,7 +381,7 @@ export default function ShowUser({
                                                 <div className="text-sm text-muted-foreground">{service.description}</div>
                                             </div>
                                             <div className="text-right">
-                                                <div className="font-medium">{service.rate_per_kwh.toFixed(2)} {service.currency}/kWh</div>
+                                                <div className="font-medium">{Number(service.rate_per_kwh).toFixed(2)} {service.currency}/kWh</div>
                                                 <Badge variant={service.is_active ? 'default' : 'secondary'}>
                                                     {service.is_active ? 'Available' : 'Unavailable'}
                                                 </Badge>

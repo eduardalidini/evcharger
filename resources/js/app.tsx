@@ -19,8 +19,11 @@ configureEcho({
     auth: {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
         },
     },
+    disableStats: true,
 });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';

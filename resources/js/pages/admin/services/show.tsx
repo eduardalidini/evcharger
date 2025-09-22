@@ -5,10 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
 import { index as servicesIndex, show as servicesShow } from '@/routes/admin/services';
-import { ArrowLeft, Zap, Activity, DollarSign, Clock } from 'lucide-react';
+import { ArrowLeft, Zap, Activity, DollarSign, Clock, Edit, Trash2 } from 'lucide-react';
 
 interface ChargingService {
     id: number;
@@ -133,9 +133,28 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                         <p className="text-muted-foreground">{service.description}</p>
                     </div>
                 </div>
-                <Badge variant={service.is_active ? 'default' : 'secondary'}>
-                    {service.is_active ? 'Active' : 'Inactive'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                    <Badge variant={service.is_active ? 'default' : 'secondary'}>
+                        {service.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Button asChild>
+                        <Link href={`/admin/services/${service.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                        </Link>
+                    </Button>
+                    <Button 
+                        variant="destructive"
+                        onClick={() => {
+                            if (confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
+                                router.delete(`/admin/services/${service.id}`);
+                            }
+                        }}
+                    >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                    </Button>
+                </div>
             </div>
 
             {/* Service Details Card */}
@@ -148,15 +167,27 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                         <div>
                             <label className="text-sm font-medium text-muted-foreground">Rate per kWh</label>
                             <div className="text-2xl font-bold">
-                                {service.rate_per_kwh.toFixed(4)} {service.currency}
+                                {Number(service.rate_per_kwh).toFixed(4)} {service.currency}
                             </div>
                         </div>
                         <div>
                             <label className="text-sm font-medium text-muted-foreground">Status</label>
-                            <div className="mt-1">
+                            <div className="mt-1 flex items-center gap-2">
                                 <Badge variant={service.is_active ? 'default' : 'secondary'}>
                                     {service.is_active ? 'Active' : 'Inactive'}
                                 </Badge>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className={service.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}
+                                    onClick={() => {
+                                        if (confirm(`Are you sure you want to ${service.is_active ? 'deactivate' : 'activate'} this service?`)) {
+                                            router.post(`/admin/services/${service.id}/toggle-status`);
+                                        }
+                                    }}
+                                >
+                                    {service.is_active ? 'Deactivate' : 'Activate'}
+                                </Button>
                             </div>
                         </div>
                         <div>
