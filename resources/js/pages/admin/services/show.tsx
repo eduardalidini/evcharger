@@ -5,10 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
-import { index as servicesIndex, show as servicesShow } from '@/routes/admin/services';
-import { ArrowLeft, Zap, Activity, DollarSign, Clock } from 'lucide-react';
+import { index as servicesIndex, show as servicesShow, update as servicesUpdate, destroy as servicesDestroy } from '@/routes/admin/services';
+import { ArrowLeft, Zap, Activity, DollarSign, Clock, Edit, Trash2, Save, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ChargingService {
     id: number;
@@ -74,13 +78,52 @@ interface ServiceShowProps {
 }
 
 export default function ServiceShow({ service, sessions, transactions, stats }: ServiceShowProps) {
+    const { t } = useTranslation();
+    const [isEditing, setIsEditing] = useState(false);
+    const [form, setForm] = useState({
+        name: service.name,
+        description: service.description || '',
+        rate_per_kwh: String(service.rate_per_kwh ?? ''),
+        currency: service.currency,
+        is_active: !!service.is_active,
+        sort_order: String(service.sort_order ?? '0'),
+    });
+
+    const safeNumber = (value: number | string | null | undefined): number => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const onChange = (field: keyof typeof form, value: string | boolean) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const submitUpdate = () => {
+        router.put(servicesUpdate(service.id).url, {
+            name: form.name,
+            description: form.description,
+            rate_per_kwh: Number(form.rate_per_kwh),
+            currency: form.currency,
+            is_active: form.is_active,
+            sort_order: Number(form.sort_order),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setIsEditing(false),
+        });
+    };
+
+    const confirmDelete = () => {
+        if (!confirm(t('services.messages.confirmDelete'))) return;
+        router.delete(servicesDestroy(service.id).url);
+    };
+    
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Dashboard',
+            title: t('admin.navigation.dashboard'),
             href: dashboard().url,
         },
         {
-            title: 'Services',
+            title: t('admin.navigation.services'),
             href: servicesIndex().url,
         },
         {
@@ -133,9 +176,17 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                         <p className="text-muted-foreground">{service.description}</p>
                     </div>
                 </div>
-                <Badge variant={service.is_active ? 'default' : 'secondary'}>
-                    {service.is_active ? 'Active' : 'Inactive'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(v => !v)}>
+                        {isEditing ? (<><X className="h-4 w-4 mr-2" />Cancel</>) : (<><Edit className="h-4 w-4 mr-2" />Edit</>)}
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={confirmDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                    </Button>
+                    <Badge variant={service.is_active ? 'default' : 'secondary'}>
+                        {service.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                </div>
             </div>
 
             {/* Service Details Card */}
@@ -144,30 +195,69 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                     <CardTitle>Service Details</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                            <label className="text-sm font-medium text-muted-foreground">Rate per kWh</label>
-                            <div className="text-2xl font-bold">
-                                {service.rate_per_kwh.toFixed(4)} {service.currency}
+                    {!isEditing ? (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground">Rate per kWh</label>
+                                <div className="text-2xl font-bold">
+                                    {safeNumber(service.rate_per_kwh).toFixed(4)} {service.currency}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground">Status</label>
+                                <div className="mt-1">
+                                    <Badge variant={service.is_active ? 'default' : 'secondary'}>
+                                        {service.is_active ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground">Sort Order</label>
+                                <div className="text-2xl font-bold">{service.sort_order}</div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-muted-foreground">Created</label>
+                                <div className="text-sm">{formatDate(service.created_at)}</div>
                             </div>
                         </div>
-                        <div>
-                            <label className="text-sm font-medium text-muted-foreground">Status</label>
-                            <div className="mt-1">
-                                <Badge variant={service.is_active ? 'default' : 'secondary'}>
-                                    {service.is_active ? 'Active' : 'Inactive'}
-                                </Badge>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium">Name</label>
+                                    <Input value={form.name} onChange={(e) => onChange('name', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Currency</label>
+                                    <Input value={form.currency} onChange={(e) => onChange('currency', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Rate per kWh</label>
+                                    <Input type="number" step="0.0001" value={form.rate_per_kwh} onChange={(e) => onChange('rate_per_kwh', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Sort Order</label>
+                                    <Input type="number" value={form.sort_order} onChange={(e) => onChange('sort_order', e.target.value)} />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-sm font-medium">Description</label>
+                                    <Input value={form.description} onChange={(e) => onChange('description', e.target.value)} />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Checkbox checked={form.is_active} onCheckedChange={(v: boolean) => onChange('is_active', v)} />
+                                    <span className="text-sm">Active</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                                    <X className="h-4 w-4 mr-2" />Cancel
+                                </Button>
+                                <Button onClick={submitUpdate}>
+                                    <Save className="h-4 w-4 mr-2" />Save Changes
+                                </Button>
                             </div>
                         </div>
-                        <div>
-                            <label className="text-sm font-medium text-muted-foreground">Sort Order</label>
-                            <div className="text-2xl font-bold">{service.sort_order}</div>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium text-muted-foreground">Created</label>
-                            <div className="text-sm">{formatDate(service.created_at)}</div>
-                        </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -197,7 +287,7 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                         <Clock className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_energy.toFixed(2)} kWh</div>
+                        <div className="text-2xl font-bold">{safeNumber(stats.total_energy).toFixed(2)} kWh</div>
                     </CardContent>
                 </Card>
                 <Card>
@@ -206,7 +296,7 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_revenue.toFixed(2)} {service.currency}</div>
+                        <div className="text-2xl font-bold">{safeNumber(stats.total_revenue).toFixed(2)} {service.currency}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -246,8 +336,8 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                                             </TableCell>
                                             <TableCell>{getStatusBadge(session.status)}</TableCell>
                                             <TableCell>{formatDate(session.started_at)}</TableCell>
-                                            <TableCell>{session.energy_consumed.toFixed(3)} kWh</TableCell>
-                                            <TableCell>{session.credits_used.toFixed(2)} {service.currency}</TableCell>
+                                            <TableCell>{safeNumber(session.energy_consumed).toFixed(3)} kWh</TableCell>
+                                            <TableCell>{safeNumber(session.credits_used).toFixed(2)} {service.currency}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -293,9 +383,9 @@ export default function ServiceShow({ service, sessions, transactions, stats }: 
                                                 </div>
                                             </TableCell>
                                             <TableCell>{formatDuration(transaction.duration_minutes)}</TableCell>
-                                            <TableCell>{transaction.energy_consumed.toFixed(3)} kWh</TableCell>
+                                            <TableCell>{safeNumber(transaction.energy_consumed).toFixed(3)} kWh</TableCell>
                                             <TableCell className="font-medium">
-                                                {transaction.total_amount.toFixed(2)} {service.currency}
+                                                {safeNumber(transaction.total_amount).toFixed(2)} {service.currency}
                                             </TableCell>
                                             <TableCell>{formatDate(transaction.session_started_at)}</TableCell>
                                         </TableRow>

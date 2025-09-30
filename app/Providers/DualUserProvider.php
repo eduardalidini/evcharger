@@ -77,16 +77,33 @@ class DualUserProvider implements UserProvider
             return null;
         }
 
-        // Try individual users first
-        $user = IndividualUser::where('email', $credentials['email'])->first();
-        if ($user) {
-            return $user;
+        $email = $credentials['email'];
+        $password = $credentials['password'] ?? null;
+
+        // Fetch possible matches from both tables
+        $individual = IndividualUser::where('email', $email)->first();
+        $business = BusinessUser::where('email', $email)->first();
+
+        // If only one exists, return it
+        if ($individual && !$business) {
+            return $individual;
+        }
+        if ($business && !$individual) {
+            return $business;
         }
 
-        // Try business users
-        $user = BusinessUser::where('email', $credentials['email'])->first();
-        if ($user) {
-            return $user;
+        // If both exist with the same email, disambiguate using password when provided
+        if ($individual && $business) {
+            if ($password) {
+                if (password_verify($password, $individual->getAuthPassword())) {
+                    return $individual;
+                }
+                if (password_verify($password, $business->getAuthPassword())) {
+                    return $business;
+                }
+            }
+            // Fallback: prefer individual by default
+            return $individual;
         }
 
         return null;

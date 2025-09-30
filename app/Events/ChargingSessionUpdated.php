@@ -3,9 +3,7 @@
 namespace App\Events;
 
 use App\Models\ChargingSession;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -27,7 +25,7 @@ class ChargingSessionUpdated implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('admin.charging'),
-            new PrivateChannel('user.charging.' . $this->session->user_id),
+            new PrivateChannel('user.charging.'.$this->session->user_id),
             new PrivateChannel('charging.global'),
         ];
     }
@@ -38,13 +36,15 @@ class ChargingSessionUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $user = $this->session->user();
-        
+
         return [
             'session' => [
                 'id' => $this->session->id,
                 'user_id' => $this->session->user_id,
-                'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                'user_name' => $user ? $user->name.' '.$user->surname : 'Unknown',
                 'status' => $this->session->status,
+                'charge_point_id' => $this->session->charge_point_id,
+                'charge_point_status' => $this->session->chargePoint->status,
                 'energy_consumed' => $this->session->energy_consumed,
                 'credits_used' => $this->session->credits_used,
                 'duration_minutes' => $this->session->getDurationInMinutes(),

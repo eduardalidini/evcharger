@@ -41,7 +41,6 @@ interface ChargePoint {
     identifier: string;
     name: string;
     status: string;
-    is_simulation: boolean;
 }
 
 interface ActiveSession {
@@ -182,11 +181,11 @@ export default function ShowUser({
                             </div>
                             <div className="mt-6 border-t border-sidebar-border/60 dark:border-sidebar-border pt-4 space-y-4">
                                 <div className="pt-2">
-                                    <div className="text-sm font-semibold mb-2">Add Credits</div>
+                                    <div className="text-sm font-semibold mb-2">{t('users.addCredits')}</div>
                                     <form method="post" action="/admin/users/products/buy" className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                                         <input type="hidden" name="_token" value={(window as any).Laravel?.csrfToken || (document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content} />
                                         <div>
-                                            <label className="block text-xs text-muted-foreground mb-1">Credit Product</label>
+                                            <label className="block text-xs text-muted-foreground mb-1">{t('users.creditProduct')}</label>
                                             <select name="product_id" className="border rounded px-3 py-2">
                                                 {creditProducts.map((p) => (
                                                     <option key={p.id} value={p.id}>{p.name} (+{Number(p.credit_value).toFixed(2)} cr)</option>
@@ -194,12 +193,12 @@ export default function ShowUser({
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-xs text-muted-foreground mb-1">Quantity</label>
+                                            <label className="block text-xs text-muted-foreground mb-1">{t('users.quantity')}</label>
                                             <input name="quantity" type="number" min={1} defaultValue={1} className="border rounded px-3 py-2" />
                                         </div>
                                         <input type="hidden" name="user_id" value={user.id} />
                                         <input type="hidden" name="user_type" value={user.user_type} />
-                                        <Button type="submit" variant="secondary">Buy Credits</Button>
+                                        <Button type="submit" variant="secondary">{t('users.buyCredits')}</Button>
                                     </form>
                                 </div>
                             </div>
@@ -235,14 +234,14 @@ export default function ShowUser({
                         {/* User Balance */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Available Credits</CardTitle>
+                                <CardTitle>{t('users.availableCredits')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="text-3xl font-bold text-green-600">
                                     {user.balance.toFixed(2)} ALL
                                 </div>
                                 <p className="text-sm text-muted-foreground">
-                                    1 credit = 1 ALL • Used for charging sessions
+                                    {t('users.creditDescription')}
                                 </p>
                             </CardContent>
                         </Card>
@@ -253,33 +252,33 @@ export default function ShowUser({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Zap className="h-5 w-5 text-green-500" />
-                                        Active Charging Session
+                                        {t('users.activeChargingSession')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Service</div>
+                                            <div className="text-sm text-muted-foreground">{t('charging.service')}</div>
                                             <div className="font-medium">{activeSession.service_name}</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Charge Point</div>
+                                            <div className="text-sm text-muted-foreground">{t('charging.chargePoint')}</div>
                                             <div className="font-medium">{activeSession.charge_point_name}</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Status</div>
+                                            <div className="text-sm text-muted-foreground">{t('common.status')}</div>
                                             <Badge variant="default">{activeSession.status}</Badge>
                                         </div>
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Energy Consumed</div>
+                                            <div className="text-sm text-muted-foreground">{t('users.energyConsumed')}</div>
                                             <div className="font-medium">{activeSession.energy_consumed.toFixed(3)} kWh</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Credits Used</div>
+                                            <div className="text-sm text-muted-foreground">{t('users.creditsUsed')}</div>
                                             <div className="font-medium">{activeSession.credits_used.toFixed(2)} ALL</div>
                                         </div>
                                         <div>
-                                            <div className="text-sm text-muted-foreground">Started</div>
+                                            <div className="text-sm text-muted-foreground">{t('users.started')}</div>
                                             <div className="font-medium">
                                                 {new Date(activeSession.started_at).toLocaleString()}
                                             </div>
@@ -292,7 +291,7 @@ export default function ShowUser({
                                             disabled={processing}
                                         >
                                             <Square className="h-4 w-4 mr-2" />
-                                            Stop Session
+                                            {t('users.stopSession')}
                                         </Button>
                                     </div>
                                 </CardContent>
@@ -305,7 +304,7 @@ export default function ShowUser({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Zap className="h-5 w-5 text-blue-500" />
-                                        Start Charging Session
+                                        {t('users.startChargingSession')}
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
@@ -313,9 +312,9 @@ export default function ShowUser({
                                         <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                             <AlertCircle className="h-5 w-5 text-yellow-600" />
                                             <div>
-                                                <div className="font-medium text-yellow-800">Insufficient Credits</div>
+                                                <div className="font-medium text-yellow-800">{t('users.insufficientCredits')}</div>
                                                 <div className="text-sm text-yellow-600">
-                                                    Minimum 10 ALL credits required to start a session
+                                                    {t('users.insufficientCreditsDesc')}
                                                 </div>
                                             </div>
                                         </div>
@@ -323,10 +322,10 @@ export default function ShowUser({
                                         <>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="text-sm font-medium">Service</label>
+                                                    <label className="text-sm font-medium">{t('charging.service')}</label>
                                                     <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select charging service" />
+                                                            <SelectValue placeholder={t('users.selectChargingService')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {chargingServices.filter(s => s.is_active).map((service) => (
@@ -338,10 +337,10 @@ export default function ShowUser({
                                                     </Select>
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm font-medium">Charge Point</label>
+                                                    <label className="text-sm font-medium">{t('charging.chargePoint')}</label>
                                                     <Select value={selectedChargePointId} onValueChange={setSelectedChargePointId}>
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select charge point" />
+                                                            <SelectValue placeholder={t('users.selectChargePoint')} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {availableChargePoints.filter(cp => cp.status === 'Available').map((chargePoint) => (
@@ -359,7 +358,7 @@ export default function ShowUser({
                                                 className="w-full"
                                             >
                                                 <Play className="h-4 w-4 mr-2" />
-                                                Start Charging Session
+                                                {t('users.startChargingSession')}
                                             </Button>
                                         </>
                                     )}
@@ -370,7 +369,7 @@ export default function ShowUser({
                         {/* Available Services */}
                         <Card>
                             <CardHeader>
-                                <CardTitle>Available Services</CardTitle>
+                                <CardTitle>{t('users.availableServices')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-4">
@@ -399,7 +398,7 @@ export default function ShowUser({
 
     function startUserSession() {
         if (!selectedServiceId || !selectedChargePointId) {
-            alert('Please select both service and charge point');
+            alert(t('charging.selectBothRequired'));
             return;
         }
 
@@ -427,5 +426,8 @@ export default function ShowUser({
         });
     }
 }
+
+
+
 
 

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Play, Pause, Square, Zap, AlertCircle, Clock, Battery, DollarSign, Activity } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { useTranslation } from 'react-i18next';
 
 interface User {
     id: number;
@@ -29,7 +30,6 @@ interface ChargePoint {
     identifier: string;
     name: string;
     status: string;
-    is_simulation: boolean;
 }
 
 interface ActiveSession {
@@ -70,74 +70,77 @@ export default function ChargingIndex({
     activeSession, 
     recentTransactions 
 }: ChargingIndexProps) {
+    const { t } = useTranslation();
     const [selectedServiceId, setSelectedServiceId] = useState<string>('');
     const [selectedChargePointId, setSelectedChargePointId] = useState<string>('');
     const [processing, setProcessing] = useState(false);
+    const [preparingIdentifier, setPreparingIdentifier] = useState<string>('');
     const [sessionTimer, setSessionTimer] = useState(0);
     const [estimatedCost, setEstimatedCost] = useState(0);
     const [liveChargePoints, setLiveChargePoints] = useState<ChargePoint[]>(chargePoints);
 
     // WebSocket listeners for real-time updates
     useEffect(() => {
-        let wsConnected = false;
-        let interval: NodeJS.Timeout;
-        
-        // Try WebSocket first for user-specific updates
-        if (window.Echo && user) {
+        const echo: any = (window as any).Echo;
+        let interval: NodeJS.Timeout | undefined;
+
+        if (echo) {
             try {
-                const channel = window.Echo.private(`user.charging.${user.id}`);
-                
-                channel.listen('.session.started', (event: any) => {
-                    console.log('User session started:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions'] });
+                const globalChannel = echo.channel('charging.global');
+                let userChannel: any = null;
+                if (user?.id) {
+                    userChannel = echo.private(`user.charging.${user.id}`);
+                }
+
+                const reloadUser = (only: string[]) => router.reload({ only });
+
+                const applySessionChargePoint = (event: any) => {
+                    const s = event.session;
+                    if (!s?.charge_point_id || !s?.charge_point_status) return;
+                    setLiveChargePoints(prev => prev.map(cp => cp.id === s.charge_point_id ? { ...cp, status: s.charge_point_status } : cp));
+                };
+
+                if (userChannel) {
+                    userChannel
+                        .listen('.session.started', (e: any) => { applySessionChargePoint(e); reloadUser(['activeSession', 'recentTransactions']); })
+                        .listen('.session.stopped', (e: any) => { applySessionChargePoint(e); reloadUser(['activeSession', 'recentTransactions', 'user']); })
+                        .listen('.session.updated', (e: any) => { applySessionChargePoint(e); reloadUser(['activeSession']); });
+                }
+
+                globalChannel.listen('.charge_point.status_updated', (event: any) => {
+                    const updated = event.charge_point;
+                    setLiveChargePoints(prev => prev.map(cp => cp.id === updated.id ? { ...cp, status: updated.status } : cp));
+                    setPreparingIdentifier(prev => (updated.identifier === prev && updated.status !== 'Preparing') ? '' : prev);
                 });
-                
-                channel.listen('.session.stopped', (event: any) => {
-                    console.log('User session stopped:', event);
-                    router.reload({ only: ['activeSession', 'recentTransactions', 'user'] });
+                globalChannel.listen('.ocpp.status', (e: any) => {
+                    // e = { identifier, connectorId, status, timestamp }
+                    setLiveChargePoints(prev => prev.map(cp => cp.identifier === e.identifier ? { ...cp, status: e.status } : cp));
+                    if (e.status === 'Preparing') {
+                        setPreparingIdentifier(e.identifier);
+                    } else {
+                        setPreparingIdentifier(prev => (e.identifier === prev ? '' : prev));
+                    }
                 });
-                
-                channel.listen('.session.updated', (event: any) => {
-                    console.log('User session updated:', event);
-                    router.reload({ only: ['activeSession'] });
-                });
-                
-                // Listen for charge point status updates
-                window.Echo.private('charging.global').listen('.charge_point.status_updated', (event: any) => {
-                    console.log('Charge point status updated:', event);
-                    const updatedChargePoint = event.charge_point;
-                    
-                    // Update the local charge points state
-                    setLiveChargePoints(prev => 
-                        prev.map(cp => 
-                            cp.id === updatedChargePoint.id 
-                                ? { ...cp, status: updatedChargePoint.status }
-                                : cp
-                        )
-                    );
-                });
-                
-                wsConnected = true;
-                console.log('WebSocket connected for user charging');
             } catch (error) {
-                console.warn('WebSocket failed, falling back to polling:', error);
+                // Fall back to polling
+                interval = setInterval(() => {
+                    router.reload({ only: ['activeSession', 'user', 'recentTransactions', 'chargePoints'] });
+                }, 2000);
             }
-        }
-        
-        // Fallback polling for active sessions
-        if (!wsConnected || activeSession) {
+        } else {
+            // No Echo; poll
             interval = setInterval(() => {
-                router.reload({ only: ['activeSession', 'user', 'recentTransactions'] });
+                router.reload({ only: ['activeSession', 'user', 'recentTransactions', 'chargePoints'] });
             }, 2000);
         }
 
         return () => {
-            if (window.Echo && user) {
-                window.Echo.leaveChannel(`user.charging.${user.id}`);
+            const e: any = (window as any).Echo;
+            if (e) {
+                if (user?.id) { try { e.leaveChannel(`private-user.charging.${user.id}`); } catch {} }
+                try { e.leaveChannel('charging.global'); } catch {}
             }
-            if (interval) {
-                clearInterval(interval);
-            }
+            if (interval) clearInterval(interval);
         };
     }, [user?.id]);
 
@@ -175,29 +178,62 @@ export default function ChargingIndex({
         setLiveChargePoints(chargePoints);
     }, [chargePoints]);
 
-    const startSession = () => {
+    // Ensure Preparing banner clears when the CP becomes Available in live list
+    useEffect(() => {
+        if (!preparingIdentifier) return;
+        const cp = liveChargePoints.find(x => x.identifier === preparingIdentifier);
+        if (cp && cp.status !== 'Preparing') {
+            setPreparingIdentifier('');
+        }
+    }, [liveChargePoints, preparingIdentifier]);
+
+    const startSession = async () => {
         if (!selectedServiceId || !selectedChargePointId) {
-            alert('Please select both service and charge point');
+            alert(t('charging.selectBothRequired'));
             return;
         }
 
         if (safeNumber(user.balance) < 10) {
-            alert('Insufficient credits. Minimum 10 ALL required to start a session.');
+            alert(t('charging.insufficientCreditsAlert'));
             return;
         }
 
         setProcessing(true);
-        router.post('/user/charging/start', {
-            charging_service_id: parseInt(selectedServiceId),
-            charge_point_id: parseInt(selectedChargePointId),
-            connector_id: 1,
-        }, {
-            onSuccess: () => {
-                setSelectedServiceId('');
-                setSelectedChargePointId('');
-            },
-            onFinish: () => setProcessing(false),
-        });
+        try {
+            const cpIdNum = parseInt(selectedChargePointId);
+            const selectedCp = liveChargePoints.find(cp => cp.id === cpIdNum);
+            if (!selectedCp) throw new Error('Charge point not found');
+
+            // Call web-proxied route (session-auth) to avoid 401
+            const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch(`/ocpp/${encodeURIComponent(selectedCp.identifier)}/start`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body: JSON.stringify({ idTag: selectedCp.identifier, connectorId: 1 }),
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                const body = await res.text();
+                throw new Error(`Start failed: ${res.status} ${body}`);
+            }
+            // Show immediate local hint while waiting for realtime event
+            setLiveChargePoints(prev => prev.map(cp => cp.id === cpIdNum ? { ...cp, status: 'Preparing' } : cp));
+            setPreparingIdentifier(selectedCp.identifier);
+            // Clear selections; real-time events will update status to Preparing
+            setSelectedServiceId('');
+            setSelectedChargePointId('');
+        } catch (e) {
+            console.error(e);
+            alert('Failed to start charging. Please try again.');
+            setPreparingIdentifier('');
+        } finally {
+            setProcessing(false);
+        }
     };
 
     const pauseSession = () => {
@@ -212,7 +248,7 @@ export default function ChargingIndex({
         if (!activeSession) return;
         
         if (safeNumber(user.balance) < 5) {
-            alert('Insufficient credits to resume session');
+            alert(t('charging.insufficientCreditsResume'));
             return;
         }
         
@@ -250,11 +286,11 @@ export default function ChargingIndex({
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Dashboard',
+            title: t('navigation.dashboard'),
             href: '/dashboard',
         },
         {
-            title: 'EV Charging',
+            title: t('charging.title'),
             href: '/user/charging',
         },
     ];
@@ -296,6 +332,8 @@ export default function ChargingIndex({
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Inline preparing banner now handled inside Start New Session card */}
 
                 {/* Active Session */}
                 {activeSession && (
@@ -408,70 +446,80 @@ export default function ChargingIndex({
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                                    {safeNumber(user.balance) < 10 ? (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                        <AlertCircle className="h-5 w-5 text-yellow-600" />
-                                        <div>
-                                            <div className="font-medium text-yellow-800">Insufficient Credits</div>
-                                            <div className="text-sm text-yellow-600">
-                                                Minimum 10 ALL credits required to start a session. 
-                                                <Link href="/marketplace" className="underline ml-1">
-                                                    Buy more credits
-                                                </Link>
-                                            </div>
-                                        </div>
+                            {preparingIdentifier ? (
+                                <div className="p-4 rounded-md border border-blue-200 bg-blue-50 text-blue-900 flex items-start gap-3">
+                                    <span className="mt-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                                    <div>
+                                        <div className="font-semibold">Preparing to charge…</div>
+                                        <div className="text-sm text-blue-800/90">Connector requested on {preparingIdentifier}. Plug in the cable to begin.</div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Service</label>
-                                            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select charging service" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {services.filter(s => s.is_active).map((service) => (
-                                                        <SelectItem key={service.id} value={service.id.toString()}>
-                                                            <div>
-                                                                <div className="font-medium">{service.name}</div>
-                                                                <div className="text-sm text-gray-500">
-                                                                    {safeNumber(service.rate_per_kwh).toFixed(2)} {service.currency}/kWh
-                                                                </div>
-                                                            </div>
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium mb-2">Charge Point</label>
-                                            <Select value={selectedChargePointId} onValueChange={setSelectedChargePointId}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select charge point" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {liveChargePoints.filter(cp => cp.status === 'Available').map((chargePoint) => (
-                                                        <SelectItem key={chargePoint.id} value={chargePoint.id.toString()}>
-                                                            {chargePoint.name} ({chargePoint.status})
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                safeNumber(user.balance) < 10 ? (
+                                    <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                            <AlertCircle className="h-5 w-5 text-yellow-600" />
+                                            <div>
+                                                <div className="font-medium text-yellow-800">Insufficient Credits</div>
+                                                <div className="text-sm text-yellow-600">
+                                                    Minimum 10 ALL credits required to start a session. 
+                                                    <Link href="/marketplace" className="underline ml-1">
+                                                        Buy more credits
+                                                    </Link>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <Button 
-                                        onClick={startSession} 
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Service</label>
+                                                <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select charging service" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {services.filter(s => s.is_active).map((service) => (
+                                                            <SelectItem key={service.id} value={service.id.toString()}>
+                                                                <div>
+                                                                    <div className="font-medium">{service.name}</div>
+                                                                    <div className="text-sm text-gray-500">
+                                                                        {safeNumber(service.rate_per_kwh).toFixed(2)} {service.currency}/kWh
+                                                                    </div>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium mb-2">Charge Point</label>
+                                                <Select value={selectedChargePointId} onValueChange={setSelectedChargePointId}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select charge point" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {liveChargePoints.filter(cp => cp.status === 'Available').map((chargePoint) => (
+                                                            <SelectItem key={chargePoint.id} value={chargePoint.id.toString()}>
+                                                                {chargePoint.name} ({chargePoint.status})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            onClick={startSession} 
                                             disabled={processing || !selectedServiceId || !selectedChargePointId || safeNumber(user.balance) < 10}
                                             className="w-full"
                                             size="lg"
-                                    >
-                                        <Play className="h-5 w-5 mr-2" />
-                                        Start Charging Session
-                                    </Button>
-                                </div>
+                                        >
+                                            <Play className="h-5 w-5 mr-2" />
+                                            Start Charging Session
+                                        </Button>
+                                    </div>
+                                )
                             )}
                         </CardContent>
                     </Card>

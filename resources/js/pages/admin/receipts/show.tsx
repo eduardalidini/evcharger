@@ -86,11 +86,11 @@ const typeColors = {
 export default function ReceiptShow({ receipt }: ReceiptShowProps) {
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Admin Dashboard',
+            title: t('receipts.breadcrumb.adminDashboard'),
             href: dashboard().url,
         },
         {
-            title: 'Receipts',
+            title: t('admin.navigation.receipts'),
             href: '/admin/receipts',
         },
         {

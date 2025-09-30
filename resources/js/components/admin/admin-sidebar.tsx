@@ -8,9 +8,11 @@ import { index as businessIndex } from '@/routes/admin/business';
 import { index as currenciesIndex } from '@/routes/admin/currencies';
 import { index as productsIndex } from '@/routes/admin/products';
 import { index as servicesIndex } from '@/routes/admin/services';
+import { index as sessionsIndex } from '@/routes/admin/sessions';
+import { index as chargePointsIndex } from '@/routes/admin/charge-points';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Receipt, Building2, IndianRupee, Package, Settings, Wrench, Zap } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Users, Receipt, Building2, IndianRupee, Package, Settings, Wrench, Zap, Activity } from 'lucide-react';
 import AppLogo from '../app-logo';
 import { AdminNavMain } from './admin-nav-main';
 import { useTranslation } from 'react-i18next';
@@ -33,11 +35,6 @@ export function AdminSidebar() {
 
     const mainNavItems: NavItem[] = [
         {
-            title: t('admin.navigation.dashboard'),
-            href: dashboard(),
-            icon: LayoutGrid,
-        },
-        {
             title: t('admin.navigation.users'),
             href: usersIndex(),
             icon: Users,
@@ -48,9 +45,19 @@ export function AdminSidebar() {
             icon: Receipt,
         },
         {
-            title: 'Services',
+            title: t('admin.navigation.sessionManagement'),
+            href: sessionsIndex(),
+            icon: Activity,
+        },
+        {
+            title: t('admin.navigation.services'),
             href: servicesIndex(),
             icon: Zap,
+        },
+        {
+            title: t('admin.navigation.chargePoints'),
+            href: chargePointsIndex(),
+            icon: Wrench,
         },
         {
             title: t('admin.navigation.products'),
@@ -76,7 +83,7 @@ export function AdminSidebar() {
                         <SidebarMenuButton size="lg" asChild>
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
-                                <span className="ml-2 text-sm">Admin Panel</span>
+                                <span className="ml-2 text-sm">{t('admin.navigation.adminPanel')}</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

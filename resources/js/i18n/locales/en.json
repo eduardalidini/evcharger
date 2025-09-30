@@ -98,11 +98,14 @@
     "admin": {
     "navigation": {
       "dashboard": "Admin Dashboard",
+      "adminPanel": "Admin Panel",
       "users": "Users",
       "business": "Business",
       "receipts": "Receipts",
       "products": "Products",
       "services": "Services",
+      "sessionManagement": "Session Management",
+      "chargePoints": "Charge Points",
       "settings": "Settings",
       "currencies": "Currencies"
     },
@@ -200,6 +203,11 @@
   },
   "services": {
     "title": "Services",
+    "chargingServices": "Charging Services",
+    "newService": "New Service",
+    "createService": "Create Service",
+    "createServiceDescription": "Provide details for the new charging service",
+    "ratePerKwh": "Rate per kWh",
     "create": "Create Service",
     "edit": "Edit Service",
     "show": "Service Details",
@@ -716,5 +724,84 @@
   "currency": {
     "fixDefaults": "Fix Defaults",
     "fixDefaultsTooltip": "Set the first currency as default when none is selected"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "balance": "Balance",
+    "creditProducts": "Credit Products",
+    "buy": "Buy",
+    "noProducts": "No products available.",
+    "receipts": "Receipts"
+  },
+  "charging": {
+    "title": "EV Charging Services",
+    "description": "Manage your electric vehicle charging sessions",
+    "availableCredits": "Available Credits",
+    "creditDescription": "1 credit = 1 ALL • Used for charging sessions",
+    "lowBalance": "Low balance",
+    "activeSession": "Active Charging Session",
+    "service": "Service",
+    "chargePoint": "Charge Point",
+    "duration": "Duration",
+    "energy": "Energy",
+    "estimatedCost": "Estimated Cost",
+    "sessionStarted": "Session Started",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stopSession": "Stop Session",
+    "startCharging": "Start Charging Session",
+    "selectService": "Select charging service",
+    "selectChargePoint": "Select charge point",
+    "insufficientCredits": "Insufficient Credits",
+    "minimumRequired": "Minimum 10 ALL credits required to start a session.",
+    "buyMoreCredits": "Buy more credits",
+    "availableServices": "Available Services",
+    "recentTransactions": "Recent Transactions",
+    "noTransactions": "No transactions yet",
+    "selectUser": "Select user",
+    "selectBothRequired": "Please select both service and charge point",
+    "insufficientCreditsAlert": "Insufficient credits. Minimum 10 ALL required to start a session.",
+    "insufficientCreditsResume": "Insufficient credits to resume session"
+  },
+  "chargePoints": {
+    "title": "Charge Points",
+    "deleteConfirm": "Delete this charge point?",
+    "newChargePoint": "New Charge Point",
+    "createChargePoint": "Create Charge Point",
+    "createChargePointDescription": "Provide details for the new charge point",
+    "editChargePoint": "Edit Charge Point",
+    "editChargePointDescription": "Update details for this charge point",
+    "identifier": "Identifier",
+    "name": "Name",
+    "location": "Location",
+    "connectors": "Connectors",
+    "maxPower": "Max Power (kW)",
+    "type": "Type",
+    "status": {
+      "Available": "Available",
+      "Occupied": "Occupied",
+      "Unavailable": "Unavailable"
+    }
+  },
+  "sessions": {
+    "title": "Session Management",
+    "selectAllRequired": "Please select user, service, and charge point",
+    "activeSessions": "Active Sessions",
+    "sessionManager": "Session Manager",
+    "user": "User",
+    "chargePoint": "Charge Point",
+    "kwh": "kWh",
+    "duration": "Duration",
+    "noActiveSessions": "No active sessions",
+    "selectUser": "Select user",
+    "selectService": "Select service",
+    "selectChargePoint": "Select charge point",
+    "startSession": "Start Session",
+    "stop": "Stop",
+    "status": {
+      "Active": "Active",
+      "Paused": "Paused",
+      "Starting": "Starting"
+    }
   }
 }

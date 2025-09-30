@@ -30,9 +30,7 @@ class ChargingController extends Controller
             ->get();
         
         // Get available charge points
-        $chargePoints = ChargePoint::where('status', 'Available')
-            ->where('is_simulation', true) // Only show simulation for now
-            ->get();
+        $chargePoints = ChargePoint::where('status', 'Available')->get();
         
         // Check for active session
         $activeSession = ChargingSession::where('user_id', $user->id)

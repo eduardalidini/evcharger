@@ -5,7 +5,6 @@ namespace App\Events;
 use App\Models\ChargePoint;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -26,7 +25,8 @@ class ChargePointStatusUpdated implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('admin.charging'),
-            new PrivateChannel('charging.global'),
+            // Global public feed for dashboards and guest views
+            new Channel('charging.global'),
         ];
     }
 
@@ -44,9 +44,8 @@ class ChargePointStatusUpdated implements ShouldBroadcastNow
                 'status' => $this->chargePoint->status,
                 'connector_count' => $this->chargePoint->connector_count,
                 'max_power' => $this->chargePoint->max_power,
-                'is_simulation' => $this->chargePoint->is_simulation,
                 'updated_at' => $this->chargePoint->updated_at->toISOString(),
-            ]
+            ],
         ];
     }
 

@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Models\ChargingService;
-use App\Models\ChargePoint;
-use App\Models\ChargingSession;
-use App\Models\ChargingTransaction;
+use App\Events\ChargePointStatusUpdated;
 use App\Events\ChargingSessionStarted;
 use App\Events\ChargingSessionStopped;
-use App\Events\ChargingSessionUpdated;
-use App\Events\ChargePointStatusUpdated;
+use App\Http\Controllers\Controller;
+use App\Models\ChargePoint;
+use App\Models\ChargingService;
+use App\Models\ChargingSession;
+use App\Models\ChargingTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,11 +29,10 @@ class ServiceController extends Controller
                 'rate_per_kwh' => (float) $service->rate_per_kwh,
                 'currency' => $service->currency,
                 'is_active' => $service->is_active,
-                'sort_order' => $service->sort_order,
             ];
         });
-        
-        $chargePoints = ChargePoint::with(['chargingSessions' => function($query) {
+
+        $chargePoints = ChargePoint::with(['chargingSessions' => function ($query) {
             $query->active()->with(['chargingService', 'chargePoint']);
         }])->get()->map(function ($chargePoint) {
             return [
@@ -45,7 +43,6 @@ class ServiceController extends Controller
                 'status' => $chargePoint->status,
                 'connector_count' => $chargePoint->connector_count,
                 'max_power' => (float) $chargePoint->max_power,
-                'is_simulation' => $chargePoint->is_simulation,
             ];
         });
 
@@ -55,9 +52,10 @@ class ServiceController extends Controller
             ->get()
             ->map(function ($session) {
                 $user = $session->user();
+
                 return [
                     'id' => $session->id,
-                    'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                    'user_name' => $user ? $user->name.' '.$user->surname : 'Unknown',
                     'user_id' => $session->user_id,
                     'service_name' => $session->chargingService->name,
                     'charge_point_name' => $session->chargePoint->name,
@@ -77,10 +75,11 @@ class ServiceController extends Controller
             ->get()
             ->map(function ($transaction) {
                 $user = $transaction->user();
+
                 return [
                     'id' => $transaction->id,
                     'transaction_reference' => $transaction->transaction_reference,
-                    'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                    'user_name' => $user ? $user->name.' '.$user->surname : 'Unknown',
                     'service_name' => $transaction->chargingService->name,
                     'charge_point_name' => $transaction->chargePoint->name,
                     'energy_consumed' => (float) $transaction->energy_consumed,
@@ -101,7 +100,7 @@ class ServiceController extends Controller
                 'active_sessions' => $activeSessions->count(),
                 'available_charge_points' => $chargePoints->where('status', 'Available')->count(),
                 'total_charge_points' => $chargePoints->count(),
-            ]
+            ],
         ]);
     }
 
@@ -116,13 +115,12 @@ class ServiceController extends Controller
             'rate_per_kwh' => 'required|numeric|min:0|max:999.9999',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
         ]);
 
         ChargingService::create($validated);
 
         return redirect()->route('admin.services.index')
-                        ->with('success', 'Charging service created successfully.');
+            ->with('success', 'Charging service created successfully.');
     }
 
     /**
@@ -156,6 +154,24 @@ class ServiceController extends Controller
     }
 
     /**
+     * Show the form for editing the specified service.
+     */
+    public function edit(ChargingService $service): Response
+    {
+        return Inertia::render('admin/services/edit', [
+            'service' => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'description' => $service->description,
+                'rate_per_kwh' => (float) $service->rate_per_kwh,
+                'currency' => $service->currency,
+                'is_active' => (bool) $service->is_active,
+                'sort_order' => (int) ($service->sort_order ?? 0),
+            ],
+        ]);
+    }
+
+    /**
      * Update the specified service.
      */
     public function update(Request $request, ChargingService $service)
@@ -166,13 +182,12 @@ class ServiceController extends Controller
             'rate_per_kwh' => 'required|numeric|min:0|max:999.9999',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
-            'sort_order' => 'integer|min:0',
         ]);
 
         $service->update($validated);
 
-        return redirect()->route('admin.services.index')
-                        ->with('success', 'Charging service updated successfully.');
+        return redirect()->route('admin.services.show', $service)
+            ->with('success', 'Charging service updated successfully.');
     }
 
     /**
@@ -183,13 +198,13 @@ class ServiceController extends Controller
         // Check if service has active sessions
         if ($service->chargingSessions()->active()->exists()) {
             return redirect()->route('admin.services.index')
-                            ->withErrors(['error' => 'Cannot delete service with active charging sessions.']);
+                ->withErrors(['error' => 'Cannot delete service with active charging sessions.']);
         }
 
         $service->delete();
 
         return redirect()->route('admin.services.index')
-                        ->with('success', 'Charging service deleted successfully.');
+            ->with('success', 'Charging service deleted successfully.');
     }
 
     /**
@@ -199,30 +214,41 @@ class ServiceController extends Controller
     {
         $validated = $request->validate([
             'user_id' => 'required|integer',
+            'user_type' => 'nullable|string|in:individual,business',
             'charging_service_id' => 'required|exists:charging_services,id',
             'charge_point_id' => 'required|exists:charge_points,id',
             'connector_id' => 'integer|min:1|max:4',
         ]);
 
         $chargePoint = ChargePoint::findOrFail($validated['charge_point_id']);
-        
+
         // Check if charge point is available
-        if (!$chargePoint->isAvailable()) {
+        if (! $chargePoint->isAvailable()) {
             return response()->json(['error' => 'Charge point is not available'], 422);
         }
 
+        // Decode composite user id for business users and determine user type
+        $compositeId = (int) $validated['user_id'];
+        $isBusiness = ($validated['user_type'] ?? null) === 'business' || $compositeId >= 1000000;
+        $actualUserId = $isBusiness ? ($compositeId >= 1000000 ? ($compositeId - 1000000) : $compositeId) : $compositeId;
+        $userType = $isBusiness ? 'business' : 'individual';
+
         // Create simulation session
         $session = ChargingSession::create([
-            'user_id' => $validated['user_id'],
+            'user_id' => $actualUserId,
             'charging_service_id' => $validated['charging_service_id'],
             'charge_point_id' => $validated['charge_point_id'],
             'connector_id' => $validated['connector_id'] ?? 1,
-            'id_tag' => 'SIM-' . now()->format('YmdHis'),
+            'id_tag' => 'SIM-'.now()->format('YmdHis'),
             'transaction_id' => rand(1000, 9999),
             'status' => 'Active',
             'started_at' => now(),
             'meter_start' => rand(10000, 50000), // Random starting meter value
             'credits_reserved' => 100.00, // Reserve 100 credits for simulation
+            'ocpp_data' => [
+                'user_type' => $userType,
+                'start_initiator' => 'admin',
+            ],
         ]);
 
         // Update charge point status
@@ -230,13 +256,13 @@ class ServiceController extends Controller
 
         // Broadcast session started event
         ChargingSessionStarted::dispatch($session->load(['chargingService', 'chargePoint']));
-        
+
         // Broadcast charge point status update
         ChargePointStatusUpdated::dispatch($chargePoint->fresh());
 
         return response()->json([
             'success' => true,
-            'session' => $session
+            'session' => $session,
         ]);
     }
 
@@ -245,7 +271,7 @@ class ServiceController extends Controller
      */
     public function stopSimulation(ChargingSession $session)
     {
-        if (!$session->isActive()) {
+        if (! $session->isActive()) {
             return response()->json(['error' => 'Session is not active'], 422);
         }
 
@@ -256,7 +282,7 @@ class ServiceController extends Controller
 
         // Calculate cost
         $cost = $session->chargingService->calculateCost($simulatedConsumption);
-        
+
         // Ensure cost is positive
         $cost = abs($cost);
 
@@ -276,7 +302,7 @@ class ServiceController extends Controller
             'user_id' => $session->user_id,
             'charging_service_id' => $session->charging_service_id,
             'charge_point_id' => $session->charge_point_id,
-            'transaction_reference' => 'TXN-ADMIN-' . now()->format('YmdHis') . '-' . \Illuminate\Support\Str::random(4),
+            'transaction_reference' => 'TXN-ADMIN-'.now()->format('YmdHis').'-'.\Illuminate\Support\Str::random(4),
             'session_started_at' => $session->started_at,
             'session_stopped_at' => $session->stopped_at,
             'duration_minutes' => abs($durationMinutes),
@@ -293,7 +319,7 @@ class ServiceController extends Controller
             $session->fresh()->load(['chargingService', 'chargePoint']),
             $transaction
         );
-        
+
         // Broadcast charge point status update
         ChargePointStatusUpdated::dispatch($session->chargePoint->fresh());
 

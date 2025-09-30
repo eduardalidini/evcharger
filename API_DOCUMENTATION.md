@@ -74,6 +74,8 @@ Authorization: Bearer {your-token}
 
 ## User Management
 
+The API manages two user types: Individual and Business. Both are handled via the same endpoints below. Responses include a `user_type` to distinguish records, and fields differ slightly per type.
+
 ### 1. List Users
 **GET** `/api/admin/users`
 
@@ -85,14 +87,13 @@ Authorization: Bearer {your-token}
 - `email`: Filter by email (partial match)
 - `id_number`: Filter by ID number (partial match)
 - `phone_no`: Filter by phone number (partial match)
-- `nipt`: Filter by NIPT (partial match)
+- `nipt`: Filter by NIPT (partial match, business only)
 
 **Examples:**
 - `/api/admin/users` - Get all users
 - `/api/admin/users?name=john` - Users with "john" in name
-- `/api/admin/users?name=john&surname=doe` - Users with "john" in name AND "doe" in surname
 - `/api/admin/users?email=gmail` - Users with "gmail" in email
-- `/api/admin/users?phone_no=355` - Users with "355" in phone number
+- `/api/admin/users?nipt=L123` - Business users with NIPT like "L123"
 
 **Response:**
 ```json
@@ -101,23 +102,37 @@ Authorization: Bearer {your-token}
     "data": [
         {
             "id": 1,
+            "user_type": "individual",
             "name": "John",
             "surname": "Doe",
             "id_number": "123456789",
             "phone_no": "+355 69 123 4567",
             "email": "john@example.com",
-            "nipt": null,
             "balance": "100.50",
             "email_verified_at": null,
             "created_at": "2025-09-11T10:25:59.000000Z",
             "updated_at": "2025-09-11T10:25:59.000000Z"
+        },
+        {
+            "id": 2,
+            "user_type": "business",
+            "name": "Acme",
+            "surname": "Corp",
+            "id_number": "987654321",
+            "phone_no": "+355 68 987 6543",
+            "email": "billing@acme.com",
+            "nipt": "L12345678A",
+            "balance": "2500.00",
+            "email_verified_at": null,
+            "created_at": "2025-09-12T09:00:00.000000Z",
+            "updated_at": "2025-09-12T09:00:00.000000Z"
         }
     ]
 }
 ```
 
-### 2. Create User
-**POST** `/api/admin/users`
+### 2. Create Individual User
+**POST** `/api/admin/individual-users`
 
 **Headers:** `Authorization: Bearer {token}`
 
@@ -129,7 +144,6 @@ Authorization: Bearer {your-token}
     "id_number": "123456789",
     "phone_no": "+355 69 123 4567",
     "email": "john@example.com",
-    "nipt": null,
     "balance": 100.50,
     "password": "password123"
 }
@@ -142,12 +156,12 @@ Authorization: Bearer {your-token}
     "message": "User created successfully",
     "data": {
         "id": 1,
+        "user_type": "individual",
         "name": "John",
         "surname": "Doe",
         "id_number": "123456789",
         "phone_no": "+355 69 123 4567",
         "email": "john@example.com",
-        "nipt": null,
         "balance": "100.50",
         "email_verified_at": null,
         "created_at": "2025-09-11T10:25:59.000000Z",
@@ -156,12 +170,53 @@ Authorization: Bearer {your-token}
 }
 ```
 
-### 3. Get Single User
-**GET** `/api/admin/users/id`
+### 3. Create Business User
+**POST** `/api/admin/business-users`
 
 **Headers:** `Authorization: Bearer {token}`
 
-**Example:** `/api/admin/users/1`
+**Request Body:**
+```json
+{
+    "name": "Acme",
+    "surname": "Corp",
+    "id_number": "987654321",
+    "phone_no": "+355 68 987 6543",
+    "email": "billing@acme.com",
+    "nipt": "L12345678A",
+    "balance": 2500.00,
+    "password": "securePassword!"
+}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "User created successfully",
+    "data": {
+        "id": 2,
+        "user_type": "business",
+        "name": "Acme",
+        "surname": "Corp",
+        "id_number": "987654321",
+        "phone_no": "+355 68 987 6543",
+        "email": "billing@acme.com",
+        "nipt": "L12345678A",
+        "balance": "2500.00",
+        "email_verified_at": null,
+        "created_at": "2025-09-12T09:00:00.000000Z",
+        "updated_at": "2025-09-12T09:00:00.000000Z"
+    }
+}
+```
+
+### 4. Get Single Individual User
+**GET** `/api/admin/individual-users/{id}`
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Example:** `/api/admin/individual-users/1`
 
 **Response:**
 ```json
@@ -169,12 +224,12 @@ Authorization: Bearer {your-token}
     "success": true,
     "data": {
         "id": 1,
+        "user_type": "individual",
         "name": "John",
         "surname": "Doe",
         "id_number": "123456789",
         "phone_no": "+355 69 123 4567",
         "email": "john@example.com",
-        "nipt": null,
         "balance": "100.50",
         "email_verified_at": null,
         "created_at": "2025-09-11T10:25:59.000000Z",
@@ -183,12 +238,40 @@ Authorization: Bearer {your-token}
 }
 ```
 
-### 4. Update User
-**PUT** `/api/admin/users/id`
+### 5. Get Single Business User
+**GET** `/api/admin/business-users/{id}`
 
 **Headers:** `Authorization: Bearer {token}`
 
-**Example:** `/api/admin/users/1`
+**Example:** `/api/admin/business-users/2`
+
+**Response:**
+```json
+{
+    "success": true,
+    "data": {
+        "id": 2,
+        "user_type": "business",
+        "name": "Acme",
+        "surname": "Corp",
+        "id_number": "987654321",
+        "phone_no": "+355 68 987 6543",
+        "email": "billing@acme.com",
+        "nipt": "L12345678A",
+        "balance": "2500.00",
+        "email_verified_at": null,
+        "created_at": "2025-09-12T09:00:00.000000Z",
+        "updated_at": "2025-09-12T09:00:00.000000Z"
+    }
+}
+```
+
+### 6. Update Individual User
+**PUT** `/api/admin/individual-users/{id}`
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Example:** `/api/admin/individual-users/1`
 
 **Request Body:**
 ```json
@@ -198,13 +281,12 @@ Authorization: Bearer {your-token}
     "id_number": "123456789",
     "phone_no": "+355 69 123 4567",
     "email": "john.updated@example.com",
-    "nipt": "L12345678A",
     "balance": 200.75,
     "password": "newpassword123"
 }
 ```
 
-**Note:** Password field is optional. Leave empty to keep current password.
+**Note:** `password` is optional on update. Omit it to keep the current password.
 
 **Response:**
 ```json
@@ -213,12 +295,12 @@ Authorization: Bearer {your-token}
     "message": "User updated successfully",
     "data": {
         "id": 1,
+        "user_type": "individual",
         "name": "John Updated",
         "surname": "Doe Updated",
         "id_number": "123456789",
         "phone_no": "+355 69 123 4567",
         "email": "john.updated@example.com",
-        "nipt": "L12345678A",
         "balance": "200.75",
         "email_verified_at": null,
         "created_at": "2025-09-11T10:25:59.000000Z",
@@ -227,12 +309,72 @@ Authorization: Bearer {your-token}
 }
 ```
 
-### 5. Delete User
-**DELETE** `/api/admin/users/{id}`
+### 7. Update Business User
+**PUT** `/api/admin/business-users/{id}`
 
 **Headers:** `Authorization: Bearer {token}`
 
-**Example:** `/api/admin/users/1`
+**Example:** `/api/admin/business-users/2`
+
+**Request Body:**
+```json
+{
+    "name": "Acme",
+    "surname": "Corp",
+    "id_number": "987654321",
+    "phone_no": "+355 68 987 6543",
+    "email": "billing@acme.com",
+    "nipt": "L12345678A",
+    "balance": 2750.00,
+    "password": "newSecurePassword!"
+}
+```
+
+**Note:** `password` is optional on update. Omit it to keep the current password.
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "User updated successfully",
+    "data": {
+        "id": 2,
+        "user_type": "business",
+        "name": "Acme",
+        "surname": "Corp",
+        "id_number": "987654321",
+        "phone_no": "+355 68 987 6543",
+        "email": "billing@acme.com",
+        "nipt": "L12345678A",
+        "balance": "2750.00",
+        "email_verified_at": null,
+        "created_at": "2025-09-12T09:00:00.000000Z",
+        "updated_at": "2025-09-12T10:00:00.000000Z"
+    }
+}
+```
+
+### 8. Delete Individual User
+**DELETE** `/api/admin/individual-users/{id}`
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Example:** `/api/admin/individual-users/1`
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "User deleted successfully"
+}
+```
+
+### 9. Delete Business User
+**DELETE** `/api/admin/business-users/{id}`
+
+**Headers:** `Authorization: Bearer {token}`
+
+**Example:** `/api/admin/business-users/2`
 
 **Response:**
 ```json
@@ -267,7 +409,7 @@ All endpoints return standardized error responses:
 **Not Found (404):**
 ```json
 {
-    "message": "No query results for model [App\\Models\\User] 999"
+    "message": "No query results for model [User] 999"
 }
 ```
 
@@ -283,21 +425,24 @@ All endpoints return standardized error responses:
    - Paste the token
 
 3. **Test User Operations:**
-   - **Get All Users:** GET `/api/admin/users`
-   - **Search Users:** GET `/api/admin/users?name=john&email=gmail`
-   - **Get Single User:** GET `/api/admin/users/1`
-   - **Create User:** POST `/api/admin/users` (with JSON body)
-   - **Update User:** PUT `/api/admin/users/1` (with JSON body)
-   - **Delete User:** DELETE `/api/admin/users/1`
+   - **Get All Users (aggregate):** GET `/api/admin/users`
+   - **Search Users:** GET `/api/admin/users?name=john` or `?nipt=L123`
+   - **Get Individual:** GET `/api/admin/individual-users/1`
+   - **Get Business:** GET `/api/admin/business-users/2`
+   - **Create Individual:** POST `/api/admin/individual-users`
+   - **Create Business:** POST `/api/admin/business-users`
+   - **Update Individual:** PUT `/api/admin/individual-users/1`
+   - **Update Business:** PUT `/api/admin/business-users/2`
+   - **Delete Individual:** DELETE `/api/admin/individual-users/1`
+   - **Delete Business:** DELETE `/api/admin/business-users/2`
 
 4. **Test Error Cases:**
    - Try accessing without token
    - Try with invalid data
    - Try accessing non-existent users
 
-## Key Improvements Made
+## Notes
 
-✅ **No Pagination:** All responses return simple data arrays without pagination metadata
-✅ **Individual Field Search:** Each field can be searched separately via query parameters
-✅ **Proper Route Model Binding:** Single user endpoints use `/users/{id}` format
-✅ **Clean Responses:** Only essential user data in responses
+- `user_type` distinguishes records in responses: `individual` vs `business`.
+- `nipt` exists only for Business users; it is absent for Individuals.
+- Balances are returned as strings with 2 decimal places.

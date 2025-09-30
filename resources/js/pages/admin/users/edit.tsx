@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import AdminLayout from '@/layouts/admin/admin-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 import { dashboard } from '@/routes/admin';
 import { index as usersIndex, show as usersShow, edit as usersEdit, update as usersUpdate } from '@/routes/admin/users';
 import { LoaderCircle } from 'lucide-react';
@@ -26,14 +27,15 @@ interface EditUserProps {
 }
 
 export default function EditUser({ user }: EditUserProps) {
+    const { t } = useTranslation();
     const fromView = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'view';
     const breadcrumbs: BreadcrumbItem[] = [
         {
-            title: 'Admin Dashboard',
+            title: t('admin.navigation.dashboard'),
             href: dashboard().url,
         },
         {
-            title: 'Users',
+            title: t('admin.navigation.users'),
             href: usersIndex().url,
         },
         {

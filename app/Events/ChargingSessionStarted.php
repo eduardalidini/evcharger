@@ -3,9 +3,7 @@
 namespace App\Events;
 
 use App\Models\ChargingSession;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -26,12 +24,12 @@ class ChargingSessionStarted implements ShouldBroadcastNow
     {
         \Log::info('ChargingSessionStarted broadcasting to channels', [
             'session_id' => $this->session->id,
-            'user_id' => $this->session->user_id
+            'user_id' => $this->session->user_id,
         ]);
-        
+
         return [
             new PrivateChannel('admin.charging'),
-            new PrivateChannel('user.charging.' . $this->session->user_id),
+            new PrivateChannel('user.charging.'.$this->session->user_id),
             new PrivateChannel('charging.global'),
         ];
     }
@@ -42,19 +40,21 @@ class ChargingSessionStarted implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $user = $this->session->user();
-        
+
         return [
             'session' => [
                 'id' => $this->session->id,
                 'user_id' => $this->session->user_id,
-                'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                'user_name' => $user ? $user->name.' '.$user->surname : 'Unknown',
                 'service_name' => $this->session->chargingService->name,
                 'charge_point_name' => $this->session->chargePoint->name,
+                'charge_point_id' => $this->session->charge_point_id,
+                'charge_point_status' => $this->session->chargePoint->status,
                 'connector_id' => $this->session->connector_id,
                 'status' => $this->session->status,
                 'started_at' => $this->session->started_at,
                 'credits_reserved' => $this->session->credits_reserved,
-            ]
+            ],
         ];
     }
 

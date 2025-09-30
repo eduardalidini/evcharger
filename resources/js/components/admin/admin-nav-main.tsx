@@ -1,6 +1,7 @@
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
+import { useTranslation } from 'react-i18next';
 
 interface AdminNavMainProps {
     items: NavItem[];
@@ -8,10 +9,11 @@ interface AdminNavMainProps {
 
 export function AdminNavMain({ items }: AdminNavMainProps) {
     const { url } = usePage();
+    const { t } = useTranslation();
 
     return (
         <SidebarGroup>
-            <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
+            <SidebarGroupLabel>{t('admin.navigation.adminPanel')}</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
                     const isActive = typeof item.href === 'string' 

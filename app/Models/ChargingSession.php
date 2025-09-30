@@ -64,20 +64,29 @@ class ChargingSession extends Model
      */
     public function user()
     {
-        // First try individual users
-        $individualUser = IndividualUser::find($this->user_id);
-        if ($individualUser) {
-            $individualUser->user_type = 'individual';
-            return $individualUser;
+        $type = data_get($this->ocpp_data, 'user_type');
+        if ($type === 'business') {
+            $businessUser = BusinessUser::find($this->user_id);
+            if ($businessUser) {
+                $businessUser->user_type = 'business';
+
+                return $businessUser;
+            }
+        } else {
+            $individualUser = IndividualUser::find($this->user_id);
+            if ($individualUser) {
+                $individualUser->user_type = 'individual';
+
+                return $individualUser;
+            }
+            $businessUser = BusinessUser::find($this->user_id);
+            if ($businessUser) {
+                $businessUser->user_type = 'business';
+
+                return $businessUser;
+            }
         }
-        
-        // Then try business users
-        $businessUser = BusinessUser::find($this->user_id);
-        if ($businessUser) {
-            $businessUser->user_type = 'business';
-            return $businessUser;
-        }
-        
+
         return null;
     }
 
@@ -137,7 +146,7 @@ class ChargingSession extends Model
         if ($this->meter_stop && $this->meter_start) {
             return round(($this->meter_stop - $this->meter_start) / 1000, 3); // Convert Wh to kWh
         }
-        
+
         return 0;
     }
 
@@ -149,11 +158,11 @@ class ChargingSession extends Model
         if ($this->started_at && $this->stopped_at) {
             return abs($this->started_at->diffInMinutes($this->stopped_at));
         }
-        
+
         if ($this->started_at) {
             return abs($this->started_at->diffInMinutes(now()));
         }
-        
+
         return 0;
     }
 

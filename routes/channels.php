@@ -7,7 +7,7 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 // Register broadcasting auth routes for both user and admin guards
-Broadcast::routes(['middleware' => ['auth:web,admin']]);
+Broadcast::routes(['middleware' => ['web', 'auth:web,admin']]);
 
 // Admin charging dashboard channel
 Broadcast::channel('admin.charging', function ($user) {

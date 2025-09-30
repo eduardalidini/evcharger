@@ -84,7 +84,14 @@
     "back": "Kthehu",
     "view": "Shiko",
     "toggleSidebar": "Hap / Mbyll Panelin Anësor",
-    "today": "Sot"
+    "today": "Sot",
+    "dashboard": "Paneli",
+    "services": "Shërbimet",
+    "name": "Emri",
+    "rate": "Tarifa",
+    "status": "Statusi",
+    "active": "Aktiv",
+    "inactive": "Jo aktiv"
   },
   "navigation": {
     "dashboard": "Paneli kryesor",
@@ -98,11 +105,14 @@
     "admin": {
     "navigation": {
       "dashboard": "Paneli i Administratorit",
+      "adminPanel": "Paneli i Administratorit",
       "users": "Përdoruesit",
       "business": "Biznesi",
       "receipts": "Faturat",
       "products": "Produktet",
       "services": "Shërbimet",
+      "sessionManagement": "Menaxhimi i Sesioneve",
+      "chargePoints": "Pikat e Karikimit",
       "settings": "Cilësimet",
       "currencies": "Valuta"
     },
@@ -200,6 +210,11 @@
   },
   "services": {
     "title": "Shërbimet",
+    "chargingServices": "Shërbimet e Karikimit",
+    "newService": "Shërbim i Ri",
+    "createService": "Krijo Shërbim",
+    "createServiceDescription": "Jep detajet për shërbimin e ri të karikimit",
+    "ratePerKwh": "Çmimi për kWh",
     "create": "Krijo Shërbim",
     "edit": "Edito Shërbimin",
     "show": "Detajet e Shërbimit",
@@ -649,6 +664,12 @@
     "joinedDate": "Data e Regjistrimit",
     "viewUser": "Shiko {{name}}",
     "userDetails": "Detajet e Përdoruesit",
+    "allUsers": "Të Gjithë Përdoruesit",
+    "allUsersFilter": "Të Gjithë Përdoruesit ({{count}})",
+    "individualFilter": "Individual ({{count}})",
+    "businessFilter": "Biznes ({{count}})",
+    "id": "ID",
+    "type": "Lloji",
     "tabs": {
       "overview": "Përmbledhje",
       "wallet": "Portofoli",
@@ -667,7 +688,24 @@
     "ledgerPlaceholder": "Tabela e lëvizjeve së shpejti...",
     "paymentsPlaceholder": "Metodat e pagesës dhe historiku së shpejti...",
     "servicesPlaceholder": "Lista e shërbimeve të blera së shpejti...",
-    "activityPlaceholder": "Kronologjia e aktivitetit së shpejti..."
+    "activityPlaceholder": "Kronologjia e aktivitetit së shpejti...",
+    "addCredits": "Shto Kredite",
+    "creditProduct": "Produkti i Kreditit",
+    "quantity": "Sasia",
+    "buyCredits": "Bli Kredite",
+    "availableCredits": "Kreditet e Disponueshme",
+    "creditDescription": "1 kredit = 1 ALL • Përdoret për sesionet e karikimit",
+    "activeChargingSession": "Sesioni Aktiv i Karikimit",
+    "startChargingSession": "Fillo Sesionin e Karikimit",
+    "selectChargingService": "Përzgjidhni shërbimin e karikimit",
+    "selectChargePoint": "Përzgjidhni pikën e karikimit",
+    "insufficientCredits": "Kredite të Pamjaftueshme",
+    "insufficientCreditsDesc": "Minimum 10 kredite ALL të kërkuara për të filluar një sesion",
+    "stopSession": "Ndalo Sesionin",
+    "energyConsumed": "Energjia e Konsumuar",
+    "creditsUsed": "Kreditet e Përdorura",
+    "started": "Filloi",
+    "availableServices": "Shërbimet e Disponueshme"
   },
   
   "validation": {
@@ -687,5 +725,84 @@
   "currency": {
     "fixDefaults": "Ndryshoni Valutën Default ",
     "fixDefaultsTooltip": "Vendosni monedhën e parë si default kur asnjë nuk është zgjedhur"
+  },
+  "marketplace": {
+    "title": "Tregu",
+    "balance": "Balanca",
+    "creditProducts": "Produktet e Kreditit",
+    "buy": "Blej",
+    "noProducts": "Nuk ka produkte të disponueshme.",
+    "receipts": "Faturat"
+  },
+  "charging": {
+    "title": "Shërbimet e Karikimit EV",
+    "description": "Menaxhoni sesionet tuaja të karikimit të automjeteve elektrike",
+    "availableCredits": "Kreditet e Disponueshme",
+    "creditDescription": "1 kredit = 1 ALL • Përdoret për sesionet e karikimit",
+    "lowBalance": "Balancë e ulët",
+    "activeSession": "Sesioni Aktiv i Karikimit",
+    "service": "Shërbimi",
+    "chargePoint": "Pika e Karikimit",
+    "duration": "Kohëzgjatja",
+    "energy": "Energjia",
+    "estimatedCost": "Kostoja e Vlerësuar",
+    "sessionStarted": "Sesioni Filloi",
+    "pause": "Pauzë",
+    "resume": "Vazhdo",
+    "stopSession": "Ndalo Sesionin",
+    "startCharging": "Fillo Sesionin e Karikimit",
+    "selectService": "Përzgjidhni shërbimin e karikimit",
+    "selectChargePoint": "Përzgjidhni pikën e karikimit",
+    "insufficientCredits": "Kredite të Pamjaftueshme",
+    "minimumRequired": "Minimum 10 kredite ALL të kërkuara për të filluar një sesion.",
+    "buyMoreCredits": "Bli më shumë kredite",
+    "availableServices": "Shërbimet e Disponueshme",
+    "recentTransactions": "Transaksionet e Fundit",
+    "noTransactions": "Nuk ka transaksione akoma",
+    "selectUser": "Përzgjidhni përdoruesin",
+    "selectBothRequired": "Ju lutemi përzgjidhni si shërbimin ashtu edhe pikën e karikimit",
+    "insufficientCreditsAlert": "Kredite të pamjaftueshme. Minimum 10 kredite ALL të kërkuara për të filluar një sesion.",
+    "insufficientCreditsResume": "Kredite të pamjaftueshme për të vazhduar sesionin"
+  },
+  "chargePoints": {
+    "title": "Pikat e Karikimit",
+    "deleteConfirm": "Të fshihet kjo pikë karikimi?",
+    "newChargePoint": "Pikë e Re Karikimi",
+    "createChargePoint": "Krijo Pikë Karikimi",
+    "createChargePointDescription": "Jep detajet për pikën e re të karikimit",
+    "editChargePoint": "Edito Pikën e Karikimit",
+    "editChargePointDescription": "Përditëso detajet për këtë pikë karikimi",
+    "identifier": "Identifikuesi",
+    "name": "Emri",
+    "location": "Vendndodhja",
+    "connectors": "Lidhësit",
+    "maxPower": "Fuqia Maksimale (kW)",
+    "type": "Lloji",
+    "status": {
+      "Available": "E Disponueshme",
+      "Occupied": "E Zënë",
+      "Unavailable": "E Padisponueshme"
+    }
+  },
+  "sessions": {
+    "title": "Menaxhimi i Sesioneve",
+    "selectAllRequired": "Ju lutemi përzgjidhni përdoruesin, shërbimin dhe pikën e karikimit",
+    "activeSessions": "Sesionet Aktive",
+    "sessionManager": "Menaxhuesi i Sesioneve",
+    "user": "Përdoruesi",
+    "chargePoint": "Pika e Karikimit",
+    "kwh": "kWh",
+    "duration": "Kohëzgjatja",
+    "noActiveSessions": "Nuk ka sesione aktive",
+    "selectUser": "Përzgjidhni përdoruesin",
+    "selectService": "Përzgjidhni shërbimin",
+    "selectChargePoint": "Përzgjidhni pikën e karikimit",
+    "startSession": "Fillo Sesionin",
+    "stop": "Ndalo",
+    "status": {
+      "Active": "Aktiv",
+      "Paused": "Ndaluar",
+      "Starting": "Duke Filluar"
+    }
   }
 }

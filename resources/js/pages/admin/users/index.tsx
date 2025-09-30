@@ -101,7 +101,7 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                         className="flex items-center gap-2"
                     >
                         <Users className="h-4 w-4" />
-                        All Users ({stats.total})
+                        {t('users.allUsersFilter', { count: stats.total })}
                     </Button>
                     <Button
                         variant={activeFilter === 'individual' ? 'default' : 'outline'}
@@ -109,7 +109,7 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                         className="flex items-center gap-2"
                     >
                         <UserCheck className="h-4 w-4" />
-                        Individual ({stats.individual})
+                        {t('users.individualFilter', { count: stats.individual })}
                     </Button>
                     <Button
                         variant={activeFilter === 'business' ? 'default' : 'outline'}
@@ -117,7 +117,7 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                         className="flex items-center gap-2"
                     >
                         <Building className="h-4 w-4" />
-                        Business ({stats.business})
+                        {t('users.businessFilter', { count: stats.business })}
                     </Button>
                 </div>
 
@@ -141,8 +141,8 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                         <table className="w-full">
                             <thead className="bg-muted/50">
                                 <tr>
-                                    <th className="px-4 py-3 text-left font-medium">ID</th>
-                                    <th className="px-4 py-3 text-left font-medium">Type</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('users.id')}</th>
+                                    <th className="px-4 py-3 text-left font-medium">{t('users.type')}</th>
                                     <th className="px-4 py-3 text-left font-medium">{t('users.name')}</th>
                                     <th className="px-4 py-3 text-left font-medium">{t('settings.profile.idNumber')}</th>
                                     <th className="px-4 py-3 text-left font-medium">{t('settings.profile.phoneNumber')}</th>
@@ -170,7 +170,7 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
                                                     : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100'
                                             }`}>
-                                                {user.user_type === 'business' ? 'Business' : 'Individual'}
+                                                {user.user_type === 'business' ? t('users.business') : t('users.individual')}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">{user.name} {user.surname || ''}</td>
@@ -236,7 +236,7 @@ export default function UsersIndex({ users, search, filter, stats }: UsersIndexP
                                                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
                                                     : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100'
                                             }`}>
-                                                {user.user_type === 'business' ? 'Business' : 'Individual'}
+                                                {user.user_type === 'business' ? t('users.business') : t('users.individual')}
                                             </span>
                                         </div>
                                         <p className="text-sm text-muted-foreground">{user.email}</p>

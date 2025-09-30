@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    // OCPP bridge HTTP endpoint used to send commands to charge points
+    'ocpp_bridge' => [
+        'url' => env('OCPP_BRIDGE_URL', 'http://127.0.0.1:8888'),
+        'secret' => env('OCPP_BRIDGE_SECRET'),
+    ],
+
+    // Token used by the Node OCPP connector to ingest logs
+    'node_connector' => [
+        'token' => env('NODE_CONNECTOR_TOKEN', ''),
+    ],
+
 ];

@@ -5,6 +5,8 @@ import { Head, Link } from '@inertiajs/react';
 import { dashboard } from '@/routes/admin';
 import { Users, Receipt, DollarSign, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
+import { router } from '@inertiajs/react';
 
 interface User {
     id: number;
@@ -46,6 +48,38 @@ export default function AdminDashboard({
     recent_receipts 
 }: AdminDashboardProps) {
     const { t } = useTranslation();
+    
+    // Real-time updates for admin dashboard
+    useEffect(() => {
+        const echo: any = (window as any).Echo;
+        if (!echo) {
+            return;
+        }
+
+        const adminChannel = echo.private('admin.charging');
+        const globalPublic = echo.channel('charging.global');
+
+        const refreshAdminData = () => {
+            router.reload({
+                only: ['total_users', 'recent_users', 'total_receipts', 'monthly_revenue', 'pending_receipts', 'recent_receipts'],
+                preserveScroll: true,
+            });
+        };
+
+        adminChannel
+            .listen('.session.started', refreshAdminData)
+            .listen('.session.updated', refreshAdminData)
+            .listen('.session.stopped', refreshAdminData);
+
+        globalPublic
+            .listen('.charge_point.status_updated', refreshAdminData)
+            .listen('.ocpp.log', refreshAdminData);
+
+        return () => {
+            try { echo.leaveChannel('private-admin.charging'); } catch {}
+            try { echo.leaveChannel('charging.global'); } catch {}
+        };
+    }, []);
     
     const breadcrumbs: BreadcrumbItem[] = [
         {

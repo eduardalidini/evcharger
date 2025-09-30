@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BusinessUser;
+use App\Models\IndividualUser;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,38 +18,47 @@ class UserApiController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query();
-        
-        // Individual field filters
-        if ($request->filled('name')) {
-            $query->where('name', 'like', "%{$request->name}%");
-        }
-        
-        if ($request->filled('surname')) {
-            $query->where('surname', 'like', "%{$request->surname}%");
-        }
-        
-        if ($request->filled('email')) {
-            $query->where('email', 'like', "%{$request->email}%");
-        }
-        
-        if ($request->filled('id_number')) {
-            $query->where('id_number', 'like', "%{$request->id_number}%");
-        }
-        
-        if ($request->filled('phone_no')) {
-            $query->where('phone_no', 'like', "%{$request->phone_no}%");
-        }
-        
+        $applyFilters = function ($builder) use ($request) {
+            if ($request->filled('name')) {
+                $builder->where('name', 'like', "%{$request->name}%");
+            }
+            if ($request->filled('surname')) {
+                $builder->where('surname', 'like', "%{$request->surname}%");
+            }
+            if ($request->filled('email')) {
+                $builder->where('email', 'like', "%{$request->email}%");
+            }
+            if ($request->filled('id_number')) {
+                $builder->where('id_number', 'like', "%{$request->id_number}%");
+            }
+            if ($request->filled('phone_no')) {
+                $builder->where('phone_no', 'like', "%{$request->phone_no}%");
+            }
+        };
+
+        $individualQuery = IndividualUser::query();
+        $applyFilters($individualQuery);
+        $individuals = $individualQuery->latest()->get();
+        $individuals->each(function ($u) {
+            $u->user_type = 'individual';
+        });
+
+        $businessQuery = BusinessUser::query();
+        $applyFilters($businessQuery);
         if ($request->filled('nipt')) {
-            $query->where('nipt', 'like', "%{$request->nipt}%");
+            $businessQuery->where('nipt', 'like', "%{$request->nipt}%");
         }
-        
-        $users = $query->latest()->get();
+        $businesses = $businessQuery->latest()->get();
+        $businesses->each(function ($u) {
+            $u->user_type = 'business';
+        });
+
+        // Merge and sort by created_at desc for a unified response
+        $merged = $individuals->concat($businesses)->sortByDesc('created_at')->values();
 
         return response()->json([
             'success' => true,
-            'data' => $users
+            'data' => $merged,
         ]);
     }
 
@@ -69,14 +80,14 @@ class UserApiController extends Controller
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['balance'] = $validated['balance'] ?? 0.00;
-        $validated['isBusiness'] = !empty($validated['nipt']); // Set to true if NIPT is provided
+        $validated['isBusiness'] = ! empty($validated['nipt']); // Set to true if NIPT is provided
 
         $user = User::create($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'User created successfully',
-            'data' => $user
+            'data' => $user,
         ], 201);
     }
 
@@ -87,7 +98,7 @@ class UserApiController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => $user,
         ]);
     }
 
@@ -113,14 +124,14 @@ class UserApiController extends Controller
             $validated['password'] = Hash::make($validated['password']);
         }
 
-        $validated['isBusiness'] = !empty($validated['nipt']); // Set to true if NIPT is provided
+        $validated['isBusiness'] = ! empty($validated['nipt']); // Set to true if NIPT is provided
 
         $user->update($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
-            'data' => $user->fresh()
+            'data' => $user->fresh(),
         ]);
     }
 
@@ -133,7 +144,7 @@ class UserApiController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'User deleted successfully'
+            'message' => 'User deleted successfully',
         ]);
     }
 }

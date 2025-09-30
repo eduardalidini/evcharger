@@ -4,9 +4,7 @@ namespace App\Events;
 
 use App\Models\ChargingSession;
 use App\Models\ChargingTransaction;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -28,7 +26,7 @@ class ChargingSessionStopped implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('admin.charging'),
-            new PrivateChannel('user.charging.' . $this->session->user_id),
+            new PrivateChannel('user.charging.'.$this->session->user_id),
             new PrivateChannel('charging.global'),
         ];
     }
@@ -39,14 +37,16 @@ class ChargingSessionStopped implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $user = $this->session->user();
-        
+
         return [
             'session' => [
                 'id' => $this->session->id,
                 'user_id' => $this->session->user_id,
-                'user_name' => $user ? $user->name . ' ' . $user->surname : 'Unknown',
+                'user_name' => $user ? $user->name.' '.$user->surname : 'Unknown',
                 'service_name' => $this->session->chargingService->name,
                 'charge_point_name' => $this->session->chargePoint->name,
+                'charge_point_id' => $this->session->charge_point_id,
+                'charge_point_status' => $this->session->chargePoint->status,
                 'status' => $this->session->status,
                 'stopped_at' => $this->session->stopped_at,
                 'energy_consumed' => $this->session->energy_consumed,
@@ -59,7 +59,7 @@ class ChargingSessionStopped implements ShouldBroadcastNow
                 'total_amount' => $this->transaction->total_amount,
                 'energy_consumed' => $this->transaction->energy_consumed,
                 'duration_minutes' => $this->transaction->duration_minutes,
-            ]
+            ],
         ];
     }
 

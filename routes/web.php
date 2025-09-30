@@ -23,6 +23,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Web-proxied start command to avoid API Sanctum 401 from SPA fetch
+    Route::post('/ocpp/{identifier}/start', [\App\Http\Controllers\Web\OcppWebController::class, 'start'])
+        ->name('ocpp.web.start');
     
     // User marketplace (products only)
     Route::get('marketplace', [MarketplaceController::class, 'index'])->name('marketplace.index');

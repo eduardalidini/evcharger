@@ -364,7 +364,6 @@ class UserManagementController extends Controller
                 'identifier' => $cp->identifier,
                 'name' => $cp->name,
                 'status' => $cp->status,
-                'is_simulation' => $cp->is_simulation,
             ]),
             'activeSession' => $activeSession ? [
                 'id' => $activeSession->id,

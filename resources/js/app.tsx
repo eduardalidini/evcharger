@@ -7,7 +7,11 @@ import { initializeTheme } from './hooks/use-appearance';
 import './i18n';
 import { configureEcho } from '@laravel/echo-react';
 
-configureEcho({
+async function bootEcho() {
+    // Ensure CSRF cookie is set for private channel auth
+    try { await fetch('/sanctum/csrf-cookie', { credentials: 'include' }); } catch {}
+
+    configureEcho({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY || 'app_key',
     wsHost: import.meta.env.VITE_REVERB_HOST || '127.0.0.1',
@@ -19,9 +23,13 @@ configureEcho({
     auth: {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            'X-Requested-With': 'XMLHttpRequest',
         },
-    },
-});
+        },
+    });
+}
+
+bootEcho();
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

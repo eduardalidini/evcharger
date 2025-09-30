@@ -48,7 +48,6 @@ class SeedChargingData extends Command
                 'connector_count' => 2,
                 'max_power' => 50,
                 'firmware_version' => '1.6.0',
-                'is_simulation' => true,
                 'configuration' => [
                     'HeartbeatInterval' => 300,
                     'MeterValueSampleInterval' => 60,
@@ -67,7 +66,6 @@ class SeedChargingData extends Command
                 'connector_count' => 1,
                 'max_power' => 25,
                 'firmware_version' => '1.6.0',
-                'is_simulation' => true,
                 'configuration' => [
                     'HeartbeatInterval' => 300,
                     'MeterValueSampleInterval' => 60,

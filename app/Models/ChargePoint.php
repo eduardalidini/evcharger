@@ -19,7 +19,6 @@ class ChargePoint extends Model
         'max_power',
         'firmware_version',
         'last_heartbeat',
-        'is_simulation',
         'configuration',
         'metadata',
     ];
@@ -27,7 +26,6 @@ class ChargePoint extends Model
     protected $casts = [
         'max_power' => 'decimal:2',
         'last_heartbeat' => 'datetime',
-        'is_simulation' => 'boolean',
         'configuration' => 'array',
         'metadata' => 'array',
     ];
@@ -65,22 +63,6 @@ class ChargePoint extends Model
     public function scopeAvailable($query)
     {
         return $query->where('status', 'Available');
-    }
-
-    /**
-     * Scope to get only simulation charge points.
-     */
-    public function scopeSimulation($query)
-    {
-        return $query->where('is_simulation', true);
-    }
-
-    /**
-     * Scope to get only real charge points.
-     */
-    public function scopeReal($query)
-    {
-        return $query->where('is_simulation', false);
     }
 
     /**
